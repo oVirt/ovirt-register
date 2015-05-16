@@ -178,6 +178,9 @@ class Operations(object):
                     system.silent_restorecon(_auth_keys)
 
         os.unlink(f.name)
+        if system.node_image():
+            from ovirt.node.utils.fs import Config
+            Config().persist(_auth_keys)
 
     def execute_registration(self, node_name,
                              node_fqdn, vds_port,
