@@ -150,8 +150,8 @@ class Operations(object):
         """
         Download ssh authorized keys and save it in the node
         """
-        _auth_keys_dir = pwd.getpwuid(pwd.getpwnam(
-                                      ssh_user).pw_uid).pw_dir + "/.ssh"
+        _uid = pwd.getpwnam(ssh_user).pw_uid
+        _auth_keys_dir = pwd.getpwuid(_uid).pw_dir + "/.ssh"
         _auth_keys = _auth_keys_dir + "/authorized_keys"
 
         if not os.path.exists(_auth_keys_dir):
@@ -160,6 +160,7 @@ class Operations(object):
             if system.node_image():
                 from ovirt.node.utils.fs import Config
                 Config().persist(_auth_keys_dir)
+            os.chown(_auth_keys_dir, _uid, _uid)
 
         res = self.execute_http_cmd('get-ssh-trust')
         with tempfile.NamedTemporaryFile(
@@ -176,6 +177,7 @@ class Operations(object):
                     f_w.write(content)
                     os.chmod(_auth_keys, 0o600)
                     system.silent_restorecon(_auth_keys)
+            os.chown(_auth_keys, _uid, _uid)
 
         os.unlink(f.name)
         if system.node_image():
