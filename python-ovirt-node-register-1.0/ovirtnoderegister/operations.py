@@ -13,9 +13,9 @@
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
 import expts
+import hashlib
 import log
 import logging
-import M2Crypto
 import os
 import pwd
 import system
@@ -134,8 +134,7 @@ class Operations(object):
         with open(cert, 'r') as f:
             cert = f.read()
         print("Calculating Fingerprint...")
-        x509 = M2Crypto.X509.load_cert_string(cert, M2Crypto.X509.FORMAT_PEM)
-        fp = x509.get_fingerprint('sha1')
+        fp = hashlib.sha1(ssl.PEM_cert_to_DER_cert(cert)).hexdigest()
         fp = ':'.join(fp[pos:pos + 2] for pos in range(0, len(fp), 2))
 
         return fp
