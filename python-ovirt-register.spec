@@ -15,7 +15,6 @@ BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 BuildArch:      noarch
 
 Requires: python-requests
-Requires: m2crypto
 
 BuildRequires: python2-devel
 BuildRequires: python-setuptools
