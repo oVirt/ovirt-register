@@ -133,4 +133,4 @@ def silent_restorecon(path):
         if selinux.is_selinux_enabled():
             selinux.restorecon(path)
     except:
-        __PRINT_AND_LOG("restorecon {p} failed".format(p=path), "error")
+        __LOGGER.error("restorecon {p} failed".format(p=path), "error")
