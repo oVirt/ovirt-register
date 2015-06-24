@@ -1,15 +1,15 @@
 %{!?python_sitelib: %define python_sitelib %(%{__python} -c "from distutils.sysconfig import get_python_lib; print get_python_lib()")}
-%global libname ovirtnoderegister
+%global libname ovirtregister
 
-Name:           python-ovirt-node-register
+Name:           python-ovirt-register
 Version:        1.0
-Release:        0%{?dist}
+Release:        1%{?dist}
 Summary:        A python module for registering nodes to oVirt Engine
 
 License:        GPLv2+
 Group:          System Environment/Libraries
-URL:            https://github.com/dougsland/ovirt-node-register/wiki
-Source0:        https://github.com/dougsland/ovirt-node-register/raw/master/%{name}-%{version}.tar.gz
+URL:            https://github.com/dougsland/ovirt-register/wiki
+Source0:        https://github.com/dougsland/ovirt-register/raw/master/%{name}-%{version}.tar.gz
 
 BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 BuildArch:      noarch
@@ -39,11 +39,10 @@ Python module for turning an OS into a oVirt Engine node
 %license COPYING
 %{python_sitelib}/%{libname}/__init__.py*
 %{python_sitelib}/%{libname}/expts.py*
-%{python_sitelib}/%{libname}/log.py*
 %{python_sitelib}/%{libname}/operations.py*
 %{python_sitelib}/%{libname}/register.py*
 %{python_sitelib}/%{libname}/system.py*
-%{_bindir}/ovirt-node-register
+%{_bindir}/ovirt-register
 %if (0%{?fedora} > 12 || 0%{?rhel} > 5)
 %{python_sitelib}/*.egg-info
 %endif

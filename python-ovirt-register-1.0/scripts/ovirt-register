@@ -12,8 +12,9 @@
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
 import argparse
+import logging
 
-from ovirtnoderegister import register
+from ovirtregister import register
 
 
 if __name__ == '__main__':
@@ -73,6 +74,15 @@ if __name__ == '__main__':
              "the default port 54321"
     )
     args = parser.parse_args()
+
+    logging.basicConfig(
+        filename="/var/log/ovirt-register.log",
+        level=logging.INFO,
+        format='%(asctime)s %(message)s',
+        datefmt='%m/%d/%Y %I:%M:%S %p'
+    )
+
+    logging.getLogger(__name__)
 
     reg = register.Register(engine_fqdn=args.engine_fqdn,
                             node_fqdn=args.node_fqdn,

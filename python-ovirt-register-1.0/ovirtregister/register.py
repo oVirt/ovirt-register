@@ -14,9 +14,9 @@
 # GNU General Public License for more details.
 import expts
 import getpass
-import log
 import socket
 import operations
+import logging
 import system
 
 
@@ -41,7 +41,7 @@ class Register(object):
         vds_port    - Communication port between node and engine, default 54321
         """
 
-        self.logger = log.Log().start()
+        self.logger = logging.getLogger(__name__)
         self.logger.info("=======================================")
         self.logger.info("Logging started")
         self.logger.info("=======================================")

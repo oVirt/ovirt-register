@@ -14,7 +14,6 @@
 # GNU General Public License for more details.
 import expts
 import hashlib
-import log
 import logging
 import os
 import pwd
@@ -34,7 +33,6 @@ class Operations(object):
         self.engine_fqdn = engine_fqdn
         self.check_fqdn = check_fqdn
         self.logger = logging.getLogger(__name__)
-        self.print_and_log = log.Log().print_and_log
 
     def execute_http_cmd(self, exec_cmd, cert_validation=True):
         """ Execute registration commands in Engine
@@ -86,7 +84,7 @@ class Operations(object):
 
         self.uuid = system.host_uuid()
 
-        self.print_and_log("Collecting CA data from Engine...", level="info")
+        self.logger.info("Collecting CA data from Engine...")
         if not os.path.exists(self.engine_ca):
             if not os.path.exists(self.ca_dir):
                 os.makedirs(self.ca_dir, 0o755)
@@ -203,6 +201,5 @@ class Operations(object):
                                               sshuser=ssh_user,
                                               sshport=ssh_port)
         self.execute_http_cmd(reg_cmd)
-        self.print_and_log("Registration completed, host is pending approval "
-                           "on Engine: {e}".format(e=self.engine_fqdn),
-                           level="info")
+        self.logger.info("Registration completed, host is pending approval "
+                           "on Engine: {e}".format(e=self.engine_fqdn))

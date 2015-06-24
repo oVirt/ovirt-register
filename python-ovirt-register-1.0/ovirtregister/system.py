@@ -18,11 +18,9 @@ import selinux
 import subprocess
 import logging
 import platform
-import log
 
 __EX_DMIDECODE = "/usr/sbin/dmidecode"
-__LOG = logging.getLogger(__name__)
-__PRINT_AND_LOG = log.Log().print_and_log
+__LOGGER = logging.getLogger(__name__)
 
 
 def node_image():
@@ -60,7 +58,7 @@ def execute_cmd(sys_cmd, env_shell=False):
         if cmd.returncode != 0:
             raise OSError
     except OSError as e:
-        __LOG.error("Cannot execute shell command", exc_info=True)
+        __LOGGER.error("Cannot execute shell command", exc_info=True)
         raise e
 
     return output, err, cmd.returncode
@@ -76,7 +74,7 @@ def host_uuid():
     Return:
     UUID of host
     """
-    __PRINT_AND_LOG("Processing UUID of host...", level="info")
+    __LOGGER.info("Processing UUID of host...")
 
     __uuid = None
     __vdsm_dir = "/etc/vdsm"
