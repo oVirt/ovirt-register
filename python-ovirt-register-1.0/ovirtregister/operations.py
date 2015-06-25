@@ -151,7 +151,7 @@ class Operations(object):
         Download CA from Engine and save self.ca_engine
         """
         self.logger.info("Collecting CA data from Engine...")
-        # If engine CA dir doesnt exist create and download cer_ca_engine.pem
+        # If engine CA dir doesnt exist create and download cert_ca_engine.pem
         temp_ca_file = None
         if os.path.exists(self.ca_engine):
             calculated_fprint = self._calculate_fingerprint(self.ca_engine)
