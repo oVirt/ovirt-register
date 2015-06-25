@@ -25,10 +25,11 @@ class Operations(object):
 
     def __init__(self, engine_fqdn, fprint, check_fqdn,
                  ssh_user, ssh_port, node_fqdn, node_name,
-                 vdsm_port):
+                 vdsm_port, engine_url, engine_port):
 
         self.fprint = None
-        self.engine_url = "https://{e}".format(e=engine_fqdn)
+        self.engine_url = engine_url
+        self.engine_port = engine_port
         self.engine_fqdn = engine_fqdn
         self.check_fqdn = check_fqdn
         self.node_name = node_name
@@ -46,7 +47,7 @@ class Operations(object):
         Determine host UUID and if there is no existing /etc/vdsm/vdsm.id
         it will genereate UUID and save/persist in /etc/vdsm/vdsm.id
         """
-        self.logger.info("Processing UUID of host...")
+        self.logger.debug("Processing UUID of host...")
 
         if self.reg_protocol == "legacy":
             # REQUIRED_FOR: Engine 3.3
@@ -65,11 +66,9 @@ class Operations(object):
             with open(__VDSM_ID, 'w') as f:
                 f.write(self.uuid)
 
-            if system.isOvirtNode():
-                from ovirt.node.utils.fs import Config
-                Config().persist(__VDSM_ID)
+            system.persist(__VDSM_ID)
 
-        self.logger.info("Host UUID: {u}".format(u=_uuid))
+        self.logger.debug("Host UUID: {u}".format(u=_uuid))
 
     def _execute_http_request(self, url, cert_validation=True):
         """
@@ -99,7 +98,7 @@ class Operations(object):
         REQUIRED_FOR: Engine 3.3
         """
 
-        self.logger.info("Identifying the registration protocol...")
+        self.logger.debug("Identifying the registration protocol...")
 
         ucmd = "/ovirt-engine/services/host-register?version=1&command="
         __GET_VERSION = "https://{e}{u}{c}".format(e=self.engine_fqdn,
@@ -139,17 +138,17 @@ class Operations(object):
 
             self.url_reg = "{e}{u}".format(e=self.engine_url, u=ureg)
 
-        self.logger.info("Registration procotol selected: {p}".format(
-                         p=self.reg_protocol))
+        self.logger.debug("Registration procotol selected: {p}".format(
+                          p=self.reg_protocol))
 
-        self.logger.info("Download CA via: {u}".format(u=self.url_CA))
-        self.logger.info("Download SSH via: {u}".format(u=self.url_ssh_key))
+        self.logger.debug("Download CA via: {u}".format(u=self.url_CA))
+        self.logger.debug("Download SSH via: {u}".format(u=self.url_ssh_key))
 
     def download_ca(self):
         """
         Download CA from Engine and save self.ca_engine
         """
-        self.logger.info("Collecting CA data from Engine...")
+        self.logger.debug("Collecting CA data from Engine...")
         # If engine CA dir doesnt exist create and download cert_ca_engine.pem
         temp_ca_file = None
         if os.path.exists(self.ca_engine):
@@ -157,10 +156,8 @@ class Operations(object):
         else:
             if not os.path.exists(self.ca_dir):
                 os.makedirs(self.ca_dir, 0o755)
-                self._silent_restorecon(self.ca_dir)
-                if system.isOvirtNode():
-                    from ovirt.node.utils.fs import Config
-                    Config().persist(self.ca_dir)
+                system.silent_restorecon(self.ca_dir)
+                system.persist(self.ca_dir)
 
             if self.reg_protocol == "legacy":
                 # REQUIRED_FOR: Engine 3.3
@@ -180,10 +177,10 @@ class Operations(object):
             calculated_fprint = self._calculate_fingerprint(f.name)
             temp_ca_file = True
 
-        if self.fprint and self.fprint.loweR() != calculated_fprint.lower():
+        if self.fprint and self.fprint.lower() != calculated_fprint.lower():
             msg = "The fingeprints doesn't match:\n" \
                   "Calculated fingerprint: [{c}]\n" \
-                  "Attribute fingerprint:  [{a}]".format(c=calculated_fprint,
+                  "Fingerprint provided:   [{a}]".format(c=calculated_fprint,
                                                          a=self.fprint)
 
             self.logger.error(msg)
@@ -195,12 +192,10 @@ class Operations(object):
             os.rename(f.name, self.ca_engine)
 
         self.fprint = calculated_fprint
-        self.logger.info("Calculated fingerprint: {f}".format(
-                         f=self.fprint))
+        self.logger.debug("Calculated fingerprint: {f}".format(
+                          f=self.fprint))
 
-        if system.isOvirtNode():
-            from ovirt.node.utils.fs import Config
-            Config().persist(self.ca_engine)
+        system.persist(self.ca_engine)
 
     def _calculate_fingerprint(self, cert):
         """Calculate fingerprint of certificate
@@ -228,7 +223,7 @@ class Operations(object):
         """
         Download ssh authorized keys and save it in the node
         """
-        self.logger.info("Collecting ssh pub key data...")
+        self.logger.debug("Collecting ssh pub key data...")
         _uid = pwd.getpwnam(self.ssh_user).pw_uid
         _auth_keys_dir = pwd.getpwuid(_uid).pw_dir + "/.ssh"
         _auth_keys = _auth_keys_dir + "/authorized_keys"
@@ -237,9 +232,7 @@ class Operations(object):
         if not os.path.exists(_auth_keys_dir):
             os.makedirs(_auth_keys_dir, 0o700)
             system.silent_restorecon(_auth_keys_dir)
-            if system.node_image():
-                from ovirt.node.utils.fs import Config
-                Config().persist(_auth_keys_dir)
+            system.persist(_auth_keys_dir)
             os.chown(_auth_keys_dir, _uid, _uid)
 
         res = self._execute_http_request(self.url_ssh_key)
@@ -260,13 +253,11 @@ class Operations(object):
             os.chown(_auth_keys, _uid, _uid)
 
         os.unlink(f.name)
-        if system.node_image():
-            from ovirt.node.utils.fs import Config
-            Config().persist(_auth_keys)
+        system.persist(_auth_keys)
 
     def execute_registration(self):
         """
         Trigger the registration command against Engine
         """
-        self.logger.info("Registration URL: %s" % self.url_reg)
+        self.logger.debug("Registration URL: %s" % self.url_reg)
         self._execute_http_request(self.url_reg)

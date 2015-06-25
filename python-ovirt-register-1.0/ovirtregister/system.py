@@ -21,21 +21,6 @@ import logging
 __LOGGER = logging.getLogger(__name__)
 
 
-def node_image():
-    """
-    Check if the OS running is a node image
-
-    Returns:
-    True or False
-    """
-    node_img = False
-    if os.path.exists("/etc/ovirt-node-iso-release") or \
-            os.path.exists("/etc/rhev-hypervisor-release"):
-        node_img = True
-
-    return node_img
-
-
 def execute_cmd(sys_cmd, env_shell=False):
     """
     Execute a command on the host
@@ -75,7 +60,13 @@ def silent_restorecon(path):
         __LOGGER.error("restorecon {p} failed".format(p=path), "error")
 
 
-def isOvirtNode():
+def node_image():
+    """
+    Check if the OS running is a node image
+
+    Returns:
+    True or False
+    """
     return (os.path.exists('/etc/rhev-hypervisor-release') or
             bool(glob.glob('/etc/ovirt-node-*-release')))
 
@@ -111,6 +102,23 @@ def _getAllMacs():
     return set(macs) - set(["", "00:00:00:00:00:00"])
 
 
+def persist(filename):
+    """
+    REQUIRED: oVirt Node until 3.6
+    To save the change across reboot, oVirt Node requires
+    to call the persist API.
+    """
+    if node_image():
+        try:
+            from ovirt.node.utils.fs import Config
+            Config().persist(filename)
+        except Exception as e:
+            __LOGGER.exception("Exception: {exp}".format(exp=e))
+            raise RuntimeError("Cannot persist: {f}:\n {exc}".format(
+                               f=filename,
+                               exc=e))
+
+
 def getHostUUID(legacy=True):
     """
     This functions has been originally written in VDSM project.
@@ -118,7 +126,6 @@ def getHostUUID(legacy=True):
     """
     __hostUUID = None
     __VDSM_ID = "/etc/vdsm/vdsm.id"
-    __EX_DMIDECODE = "/usr/sbin/dmidecode"
 
     try:
         if os.path.exists(__VDSM_ID):
@@ -127,7 +134,7 @@ def getHostUUID(legacy=True):
         else:
             arch = platform.machine()
             if arch in ('x86_64', 'i686'):
-                out, err, ret = execute_cmd([__EX_DMIDECODE, "-s",
+                out, err, ret = execute_cmd(["dmidecode", "-s",
                                             "system-uuid"])
                 out = '\n'.join(line for line in out.splitlines()
                                 if not line.startswith('#'))

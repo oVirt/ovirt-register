@@ -11,7 +11,6 @@
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
-import expts
 import getpass
 import socket
 import operations
@@ -24,7 +23,8 @@ class Register(object):
     def __init__(self, engine_fqdn, node_name=None,
                  ssh_user=None, ssh_port=None,
                  node_fqdn=None, fingerprint=None,
-                 vdsm_port=None, check_fqdn=True):
+                 vdsm_port=None, check_fqdn=True,
+                 engine_https_port=None):
 
         """
         The Register goal is to register any host againt Engine
@@ -38,37 +38,51 @@ class Register(object):
         fingerprint - Validate the fingerprint provided against Engine CA
         node_fqdn   - Node FQDN or address accessible from Engine
         vdsm_port   - Communication port between node and engine, default 54321
+        engine_https_port - Engine https port
         """
 
         self.logger = logging.getLogger(__name__)
-        self.logger.info("=======================================")
-        self.logger.info("Logging started")
-        self.logger.info("=======================================")
-        self.logger.info("Received the following attributes:")
+        self.logger.debug("=======================================")
+        self.logger.debug("Logging started")
+        self.logger.debug("=======================================")
+        self.logger.debug("Received the following attributes:")
 
         if node_name is None:
             self.node_name = socket.gethostname().split(".")[0]
         else:
             self.node_name = node_name
-        self.logger.info("Node name: {name}".format(name=self.node_name))
+        self.logger.debug("Node name: {name}".format(name=self.node_name))
 
         self.check_fqdn = check_fqdn
         self.engine_fqdn = engine_fqdn
-        self.logger.info("Engine FQDN: {efqdn}".format(efqdn=self.engine_fqdn))
+        self.logger.debug("Engine FQDN: {efqdn}".format(
+                          efqdn=self.engine_fqdn))
+
+        self.engine_url = "https://{e}".format(e=engine_fqdn)
+        if engine_https_port is None:
+            self.engine_port = "443"
+        else:
+            self.engine_port = engine_https_port
+            self.engine_url = "https://{e}:{p}".format(e=self.engine_fqdn,
+                                                       p=self.engine_port)
+
+        self.logger.debug("Engine URL: {url}".format(url=self.engine_url))
+        self.logger.debug("Engine https port: {hp}".format(
+                          hp=self.engine_port))
 
         if ssh_user is None:
             self.ssh_user = getpass.getuser()
         else:
             self.ssh_user = ssh_user
-        self.logger.info("SSH User: {user}".format(user=self.ssh_user))
+        self.logger.debug("SSH User: {user}".format(user=self.ssh_user))
 
         self.fprint = fingerprint
-        self.logger.info("Fingerprint: {fp}".format(fp=self.fprint))
+        self.logger.debug("Fingerprint: {fp}".format(fp=self.fprint))
 
         self.node_image = False
         if system.node_image():
             self.node_image = True
-        self.logger.info("Node image: {ni}".format(ni=self.node_image))
+        self.logger.debug("Node image: {ni}".format(ni=self.node_image))
 
         self.states_to_run = []
 
@@ -76,21 +90,21 @@ class Register(object):
             self.ssh_port = '22'
         else:
             self.ssh_port = ssh_port
-        self.logger.info("SSH Port: {sport}".format(sport=self.ssh_port))
+        self.logger.debug("SSH Port: {sport}".format(sport=self.ssh_port))
 
         if vdsm_port is None:
             self.vdsm_port = '54321'
         else:
             self.vdsm_port = vdsm_port
-        self.logger.info("vdsm_port: {vport}".format(vport=self.vdsm_port))
+        self.logger.debug("VDSM Port: {vport}".format(vport=self.vdsm_port))
 
         if node_fqdn is None:
             self.node_fqdn = socket.gethostname()
         else:
             self.node_fqdn = node_fqdn
-        self.logger.info("Node FQDN: {nfqdn}".format(nfqdn=self.node_fqdn))
+        self.logger.debug("Node FQDN: {nfqdn}".format(nfqdn=self.node_fqdn))
 
-        self.logger.info("=======================================")
+        self.logger.debug("=======================================")
 
         """ Pre-defined states of object
             get_ca   - Download the CA pem
@@ -101,6 +115,8 @@ class Register(object):
         """
 
         self.op = operations.Operations(engine_fqdn=self.engine_fqdn,
+                                        engine_url=self.engine_url,
+                                        engine_port=self.engine_port,
                                         check_fqdn=self.check_fqdn,
                                         node_name=self.node_name,
                                         node_fqdn=self.node_fqdn,
@@ -173,8 +189,8 @@ class Register(object):
 
         if not self.states_to_run:
             msg = "It's required to add a state before execute run!"
-            self.logger.error(msg, exc_info=True)
-            raise expts().StatesError(msg)
+            self.logger.exception(msg)
+            raise RuntimeError("Exception {e}".format(e=msg))
 
         for state in self.states_to_run:
             try:
@@ -188,8 +204,8 @@ class Register(object):
             except KeyError as e:
                 self.logger.error(log, exc_info=True)
                 raise e
-            self.logger.info("Executing state: {newstate}".format(
-                             newstate=state))
+            self.logger.debug("Executing state: {newstate}".format(
+                              newstate=state))
             self.cmd[state]()
 
         self.states_to_run = []

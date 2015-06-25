@@ -13,11 +13,12 @@
 # GNU General Public License for more details.
 import argparse
 import logging
+import sys
 
 from ovirtregister import register
 
 
-if __name__ == '__main__':
+def main():
     parser = argparse.ArgumentParser(
         formatter_class=argparse.RawTextHelpFormatter,
         description='Tool to register node to Engine',
@@ -29,6 +30,12 @@ if __name__ == '__main__':
         '--engine-fqdn',
         help="Engine FQDN (See also: --check-fqdn)",
         required=True
+    )
+
+    parser.add_argument(
+        '--engine-https-port',
+        help="Define engine https port."
+             " If not provided, will be used 443",
     )
 
     parser.add_argument(
@@ -77,7 +84,7 @@ if __name__ == '__main__':
 
     logging.basicConfig(
         filename="/var/log/ovirt-register.log",
-        level=logging.INFO,
+        level=logging.DEBUG,
         format='%(asctime)s %(message)s',
         datefmt='%m/%d/%Y %I:%M:%S %p'
     )
@@ -85,6 +92,7 @@ if __name__ == '__main__':
     logging.getLogger(__name__)
 
     reg = register.Register(engine_fqdn=args.engine_fqdn,
+                            engine_https_port=args.engine_https_port,
                             node_fqdn=args.node_fqdn,
                             node_name=args.node_name,
                             ssh_user=args.ssh_user,
@@ -93,12 +101,25 @@ if __name__ == '__main__':
                             vdsm_port=args.vdsm_port,
                             check_fqdn=args.check_fqdn)
 
-    reg.set_state("get_protocol")
-    reg.set_state("get_host_uuid")
-    reg.set_state("get_ca")
-    reg.set_state("get_ssh")
-    reg.set_state("register")
-    reg.run()
+    try:
+        reg.set_state("get_protocol")
+        reg.set_state("get_host_uuid")
+        reg.set_state("get_ca")
+        reg.set_state("get_ssh")
+        reg.set_state("register")
+        reg.run()
+    except Exception as e:
+        reg.logger.exception("Exception: {exp}".format(exp=e))
+        raise RuntimeError("Cannot register this host "
+                           "into {e}:\n {exc}".format(e=args.engine_fqdn,
+                                                      exc=e))
 
     print("Registration completed, host is pending approval "
           "on Engine: {e}".format(e=args.engine_fqdn))
+
+    reg.logger.debug("Registration successfully triggered!")
+
+    return 0
+
+if __name__ == '__main__':
+    sys.exit(main())

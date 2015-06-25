@@ -14,6 +14,7 @@ Source0:        https://github.com/dougsland/ovirt-register/raw/master/%{name}-%
 BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 BuildArch:      noarch
 
+Requires: dmidecode
 Requires: python-requests
 
 BuildRequires: python2-devel
@@ -36,11 +37,10 @@ install -p -m644 man/ovirt-register.1 %buildroot%{_mandir}/man1/ovirt-register.1
 
 %files
 %defattr(-,root,root,-)
-%doc COPYING
+%doc AUTHORS docs/PROTOCOL
 %{!?_licensedir:%global license %%doc}
 %license COPYING
 %{python_sitelib}/%{libname}/__init__.py*
-%{python_sitelib}/%{libname}/expts.py*
 %{python_sitelib}/%{libname}/operations.py*
 %{python_sitelib}/%{libname}/register.py*
 %{python_sitelib}/%{libname}/system.py*

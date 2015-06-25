@@ -1,0 +1,51 @@
+Registration schema:
+
+UUID
+=========
+    - If there is UUID already generated for the system will be
+      available in /etc/vdsm/vdsm.id
+
+    - In case, there is no UUID, generate it and store in /etc/vdsm/vdsm.id
+
+Legacy reg:
+============
+    - REQUIRED_FOR: Engine 3.3
+
+    - Process UUID
+
+    - Download CA via
+      https://ENGINE_FQDN
+
+    - Download ssh pub key
+      https://ENGINE_FQDN/engine.ssh.key.txt
+
+    - Register via URL:
+      (Original .NET version and earlier Linux versions)
+      https://ENGINE_FQDN/RHEVManagerWeb/VdsAutoRegistration.aspx
+      ?vds_ip=NODE_FQDN_OR_IP&vds_name=NODE_NAME
+      &vds_unique_id=NODE_UUID&port=54321
+
+      or
+
+      https://ENGINE_FQDN/OvirtEngineWeb/register?vds_ip=NODE_FQDN_OR_IP
+      &vds_name=NODE_NAME
+      &vds_unique_id=NODE_UUID&port=54321
+
+Service reg:
+============
+    - REQUIRED_FOR: Engine >= 3.4
+
+    - Process UUID
+
+    - Download CA via get-pki-trust URL
+      https://ENGINE_FQDN/ovirt-engine/services/host-register?version=1
+      &command=get-pki-trust
+
+    - Download ssh pub key via get-ssh-trust URL
+      https://ENGINE_FQDN/ovirt-engine/services/host-register?version=1
+      &command=get-ssh-trust
+
+    - Register via URL:
+      https://ENGINE_FQDN/ovirt-engine/services/host-register?version=1
+      &command=register&name=NODE_NAME&address=NO_FQDN_OR_IP
+      &uniqueId=NODE_UUID&sshUser=SSH_USERNAME&sshPort=SSHD_PORT
