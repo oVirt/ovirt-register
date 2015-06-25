@@ -25,7 +25,7 @@ class Register(object):
     def __init__(self, engine_fqdn, node_name=None,
                  ssh_user=None, ssh_port=None,
                  node_fqdn=None, fingerprint=None,
-                 vds_port=None, check_fqdn=True):
+                 vdsm_port=None, check_fqdn=True):
 
         """
         The Register goal is to register any host againt Engine
@@ -38,7 +38,7 @@ class Register(object):
         ssh_port    - The ssh port
         fingerprint - Validate the fingerprint provided against Engine CA
         node_fqdn   - Node FQDN or address accessible from Engine
-        vds_port    - Communication port between node and engine, default 54321
+        vdsm_port   - Communication port between node and engine, default 54321
         """
 
         self.logger = logging.getLogger(__name__)
@@ -48,7 +48,7 @@ class Register(object):
         self.logger.info("Received the following attributes:")
 
         if node_name is None:
-            self.node_name = socket.gethostname()
+            self.node_name = socket.gethostname().split(".")[0]
         else:
             self.node_name = node_name
         self.logger.info("Node name: {name}".format(name=self.node_name))
@@ -79,11 +79,11 @@ class Register(object):
             self.ssh_port = ssh_port
         self.logger.info("SSH Port: {sport}".format(sport=self.ssh_port))
 
-        if vds_port is None:
-            self.vds_port = '54321'
+        if vdsm_port is None:
+            self.vdsm_port = '54321'
         else:
-            self.vds_port = vds_port
-        self.logger.info("vds_port: {vport}".format(vport=self.vds_port))
+            self.vdsm_port = vdsm_port
+        self.logger.info("vdsm_port: {vport}".format(vport=self.vdsm_port))
 
         if node_fqdn is None:
             self.node_fqdn = socket.gethostname()
@@ -97,15 +97,24 @@ class Register(object):
             get_ca   - Download the CA pem
             get_ssh  - Get trust ssh
             register - Execute the registration
+            get_protocol - Check which registration protocol engine offers
+            get_host_uuid - Get host uuid
         """
 
         self.op = operations.Operations(engine_fqdn=self.engine_fqdn,
                                         check_fqdn=self.check_fqdn,
-                                        logger=self.logger)
+                                        node_name=self.node_name,
+                                        node_fqdn=self.node_fqdn,
+                                        vdsm_port=self.vdsm_port,
+                                        ssh_user=self.ssh_user,
+                                        ssh_port=self.ssh_port,
+                                        fprint=self.fprint)
         self.cmd = {
             'get_ca': self.__download_ca,
             'get_ssh': self.__download_ssh,
             'register': self.__execute_registration,
+            'get_protocol': self.__get_protocol,
+            'get_host_uuid': self.__get_host_uuid
         }
 
     def set_state(self, state):
@@ -120,21 +129,35 @@ class Register(object):
         """
         return self.op.get_ca_fingerprint()
 
+    def get_reg_protocol(self):
+        """
+        Returns the current protocol
+        """
+        return self.op.get_ca_fingerprint()
+
+    def __get_host_uuid(self):
+        """
+        Returns the host uuid
+        """
+        return self.op.host_uuid()
+
+    def __get_protocol(self):
+        """
+        Returns the current registration protocol in the Engine
+        """
+        return self.op.get_protocol()
+
     def __download_ca(self):
         """
         Get the PEM
         """
-        return self.op.download_ca(self.fprint)
+        return self.op.download_ca()
 
     def __execute_registration(self):
         """
         Registration step
         """
-        return self.op.execute_registration(node_name=self.node_name,
-                                            node_fqdn=self.node_fqdn,
-                                            vds_port=self.vds_port,
-                                            ssh_user=self.ssh_user,
-                                            ssh_port=self.ssh_port)
+        return self.op.execute_registration()
 
     def __download_ssh(self):
         """

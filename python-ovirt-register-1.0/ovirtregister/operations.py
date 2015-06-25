@@ -12,7 +12,6 @@
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
-import expts
 import hashlib
 import logging
 import os
@@ -25,75 +24,153 @@ import tempfile
 
 class Operations(object):
 
-    def __init__(self, engine_fqdn,
-                 check_fqdn, logger):
+    def __init__(self, engine_fqdn, fprint, check_fqdn,
+                 ssh_user, ssh_port, node_fqdn, node_name,
+                 vdsm_port):
 
-        self.uuid = None
         self.fprint = None
+        self.engine_url = "https://{e}".format(e=engine_fqdn)
         self.engine_fqdn = engine_fqdn
         self.check_fqdn = check_fqdn
+        self.node_name = node_name
+        self.node_fqdn = node_fqdn
+        self.vdsm_port = vdsm_port
+        self.ssh_user = ssh_user
+        self.ssh_port = ssh_port
+        self.fprint = fprint
+        self.ca_dir = "/etc/pki/ovirt-engine/"
+        self.ca_engine = "{d}{f}".format(d=self.ca_dir, f="ca.pem")
         self.logger = logging.getLogger(__name__)
 
-    def execute_http_cmd(self, exec_cmd, cert_validation=True):
-        """ Execute registration commands in Engine
+    def host_uuid(self):
+        """
+        Determine host UUID and if there is no existing /etc/vdsm/vdsm.id
+        it will genereate UUID and save/persist in /etc/vdsm/vdsm.id
+        """
+        self.logger.info("Processing UUID of host...")
 
-        exec_cmd -- Commands from Engine for Registration
+        if self.reg_protocol == "legacy":
+            # REQUIRED_FOR: Engine 3.3
+            # The legacy version uses the format: UUID_MACADDRESS
+            _uuid = system.getHostUUID(legacy=True)
+            self.url_reg += "&vds_unique_id={u}".format(u=_uuid)
+        else:
+            # Non legacy version uses the format: UUID
+            _uuid = system.getHostUUID(legacy=False)
+            self.url_reg += "&uniqueId={u}".format(u=_uuid)
+
+        self.logger.debug("Registration via: {u}".format(u=self.url_reg))
+
+        __VDSM_ID = "/etc/vdsm/vdsm.id"
+        if not os.path.exists(__VDSM_ID):
+            with open(__VDSM_ID, 'w') as f:
+                f.write(self.uuid)
+
+            if system.isOvirtNode():
+                from ovirt.node.utils.fs import Config
+                Config().persist(__VDSM_ID)
+
+        self.logger.info("Host UUID: {u}".format(u=_uuid))
+
+    def _execute_http_request(self, url, cert_validation=True):
+        """
+        Execute http requests
+        url -- URL to be requested
         cert_validation -- SSL cert will be verified
-
-        Possible exec_cmd:
-            get-pki-trust -- Get pki trust
-            get-ssh-trust -- Get ssh trust
-            register      -- Execute registration (previous steps needed)
 
         Returns: Content of http request
         """
-        url_cmd = "https://{engine}{url}".format(
-            engine=self.engine_fqdn,
-            url="/ovirt-engine/services/host-register?version=1&command="
-        )
-        self.logger.info("http cmd [%s]" % (url_cmd + exec_cmd))
-
-        if cert_validation and self.check_fqdn:
-            cert_validation = self.engine_ca
+        if self.check_fqdn:
+            cert_validation = self.ca_engine
         else:
             cert_validation = False
 
-        try:
-            res = requests.get("{url}{cmd}".format(url=url_cmd, cmd=exec_cmd),
-                               verify=cert_validation)
-
-            if res.status_code != 200:
-                self.logger.error("http response was not OK", exc_info=True)
-                raise requests.RequestException
-        except requests.RequestException as e:
-            self.logger.error("Cannot connect to engine", exc_info=True)
-            raise e
+        res = requests.get("{u}".format(u=url), verify=cert_validation)
+        if res.status_code != 200:
+            raise requests.RequestException(
+                "http response was non OK, code {r}".format(r=res.status_code)
+            )
 
         return res.content
 
-    def download_ca(self, fprint=None):
+    def get_protocol(self):
         """
-        Download CA from Engine and save in /etc/pki/ovirt-engine/ca.pem
-
-        Return: The fingerprint of cert
+        Determine if Engine is running in registration
+        protocol version legacy or service
+        REQUIRED_FOR: Engine 3.3
         """
 
-        self.fprint = fprint
-        self.ca_dir = "/etc/pki/ovirt-engine"
-        self.engine_ca = "{dir}/ca.pem".format(dir=self.ca_dir)
+        self.logger.info("Identifying the registration protocol...")
 
-        self.uuid = system.host_uuid()
+        ucmd = "/ovirt-engine/services/host-register?version=1&command="
+        __GET_VERSION = "https://{e}{u}{c}".format(e=self.engine_fqdn,
+                                                   u=ucmd,
+                                                   c="get-version")
 
+        res = requests.get(__GET_VERSION, verify=False)
+        if res.status_code != 200:
+            self.reg_protocol = "legacy"
+            self.url_CA = self.engine_url
+
+            self.url_ssh_key = "{e}{k}".format(e=self.engine_url,
+                                               k="/engine.ssh.key.txt")
+
+            ureg = "/OvirtEngineWeb/register?vds_ip={fqdn}" \
+                "&vds_name={name}&port={mp}".format(fqdn=self.node_fqdn,
+                                                    name=self.node_name,
+                                                    mp=self.vdsm_port)
+
+            self.url_reg = "{e}{u}".format(e=self.engine_url, u=ureg)
+        else:
+            self.reg_protocol = "service"
+            self.url_CA = "{e}{uc}{c}".format(e=self.engine_url,
+                                              uc=ucmd,
+                                              c="get-pki-trust")
+
+            self.url_ssh_key = "{e}{uc}{c}".format(e=self.engine_url,
+                                                   uc=ucmd, c="get-ssh-trust")
+
+            ureg = "{uc}register&name={name}&address={fqdn}&sshUser={sshu}&" \
+                   "sshPort={sshp}&port={mp}".format(uc=ucmd,
+                                                     name=self.node_name,
+                                                     fqdn=self.node_fqdn,
+                                                     sshu=self.ssh_user,
+                                                     sshp=self.ssh_port,
+                                                     mp=self.vdsm_port)
+
+            self.url_reg = "{e}{u}".format(e=self.engine_url, u=ureg)
+
+        self.logger.info("Registration procotol selected: {p}".format(
+                         p=self.reg_protocol))
+
+        self.logger.info("Download CA via: {u}".format(u=self.url_CA))
+        self.logger.info("Download SSH via: {u}".format(u=self.url_ssh_key))
+
+    def download_ca(self):
+        """
+        Download CA from Engine and save self.ca_engine
+        """
         self.logger.info("Collecting CA data from Engine...")
-        if not os.path.exists(self.engine_ca):
+        # If engine CA dir doesnt exist create it and download the ca.pem
+        temp_ca_file = None
+        if os.path.exists(self.ca_engine):
+            calculated_fprint = self._calculate_fingerprint(self.ca_engine)
+        else:
             if not os.path.exists(self.ca_dir):
                 os.makedirs(self.ca_dir, 0o755)
-                system.silent_restorecon(self.ca_dir)
-                if system.node_image():
+                self._silent_restorecon(self.ca_dir)
+                if system.isOvirtNode():
                     from ovirt.node.utils.fs import Config
                     Config().persist(self.ca_dir)
 
-            res = self.execute_http_cmd('get-pki-trust', cert_validation=False)
+            if self.reg_protocol == "legacy":
+                # REQUIRED_FOR: Engine 3.3
+                res = ssl.get_server_certificate(
+                    (self.engine_fqdn, int(self.engine_port))
+                )
+            else:
+                res = self._execute_http_request(self.url_CA,
+                                                 cert_validation=False)
 
             with tempfile.NamedTemporaryFile(
                 dir=os.path.dirname(self.ca_dir),
@@ -101,28 +178,32 @@ class Operations(object):
             ) as f:
                 f.write(res)
 
-            os.rename(f.name, self.engine_ca)
+            calculated_fprint = self._calculate_fingerprint(f.name)
+            temp_ca_file = True
 
-        calculated_fprint = self.__calculate_fingerprint(self.engine_ca)
-
-        if self.fprint and self.fprint.lower() != calculated_fprint.lower():
+        if self.fprint and self.fprint.loweR() != calculated_fprint.lower():
             msg = "The fingeprints doesn't match:\n" \
                   "Calculated fingerprint: [{c}]\n" \
                   "Attribute fingerprint:  [{a}]".format(c=calculated_fprint,
                                                          a=self.fprint)
 
-            self.logger.error(msg, exc_info=True)
-            raise expts.FingerprintError(msg)
+            self.logger.error(msg)
+            if temp_ca_file:
+                os.unlink(f.name)
+            raise RuntimeError(msg)
+
+        if temp_ca_file:
+            os.rename(f.name, self.ca_engine)
 
         self.fprint = calculated_fprint
         self.logger.info("Calculated fingerprint: {f}".format(
-                         f=calculated_fprint))
+                         f=self.fprint))
 
-        if system.node_image():
+        if system.isOvirtNode():
             from ovirt.node.utils.fs import Config
-            Config().persist(self.engine_ca)
+            Config().persist(self.ca_engine)
 
-    def __calculate_fingerprint(self, cert):
+    def _calculate_fingerprint(self, cert):
         """Calculate fingerprint of certificate
         Args
         cert -- certificate file to be calculated the fingerprint
@@ -148,9 +229,11 @@ class Operations(object):
         """
         Download ssh authorized keys and save it in the node
         """
-        _uid = pwd.getpwnam(ssh_user).pw_uid
+        self.logger.info("Collecting ssh pub key data...")
+        _uid = pwd.getpwnam(self.ssh_user).pw_uid
         _auth_keys_dir = pwd.getpwuid(_uid).pw_dir + "/.ssh"
         _auth_keys = _auth_keys_dir + "/authorized_keys"
+        self.logger.debug("auth_key is located {f}".format(f=_auth_keys))
 
         if not os.path.exists(_auth_keys_dir):
             os.makedirs(_auth_keys_dir, 0o700)
@@ -160,7 +243,7 @@ class Operations(object):
                 Config().persist(_auth_keys_dir)
             os.chown(_auth_keys_dir, _uid, _uid)
 
-        res = self.execute_http_cmd('get-ssh-trust')
+        res = self._execute_http_request(self.url_ssh_key)
         with tempfile.NamedTemporaryFile(
             dir=_auth_keys_dir,
             delete=False
@@ -182,24 +265,9 @@ class Operations(object):
             from ovirt.node.utils.fs import Config
             Config().persist(_auth_keys)
 
-    def execute_registration(self, node_name,
-                             node_fqdn, vds_port,
-                             ssh_port, ssh_user):
+    def execute_registration(self):
         """
         Trigger the registration command against Engine
         """
-        reg_cmd = "register" \
-                  "&name={name}" \
-                  "&address={addr}" \
-                  "&uniqueId={uid}" \
-                  "&vdsPort={vdsport}" \
-                  "&sshUser={sshuser}" \
-                  "&sshPort={sshport}".format(name=node_name,
-                                              addr=node_fqdn,
-                                              uid=self.uuid,
-                                              vdsport=vds_port,
-                                              sshuser=ssh_user,
-                                              sshport=ssh_port)
-        self.execute_http_cmd(reg_cmd)
-        self.logger.info("Registration completed, host is pending approval "
-                           "on Engine: {e}".format(e=self.engine_fqdn))
+        self.logger.info("Registration URL: %s" % self.url_reg)
+        self._execute_http_request(self.url_reg)

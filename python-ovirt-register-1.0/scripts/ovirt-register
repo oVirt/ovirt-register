@@ -68,7 +68,7 @@ if __name__ == '__main__':
     )
 
     parser.add_argument(
-        '--vds-port',
+        '--vdsm-port',
         help="The port to be used in the communication between the "
              "node agent and Engine, if not provided will be used "
              "the default port 54321"
@@ -90,21 +90,15 @@ if __name__ == '__main__':
                             ssh_user=args.ssh_user,
                             ssh_port=args.ssh_port,
                             fingerprint=args.fingerprint,
-                            vds_port=args.vds_port,
+                            vdsm_port=args.vdsm_port,
                             check_fqdn=args.check_fqdn)
 
+    reg.set_state("get_protocol")
+    reg.set_state("get_host_uuid")
     reg.set_state("get_ca")
+    reg.set_state("get_ssh")
+    reg.set_state("register")
     reg.run()
 
-    yn = raw_input("Are you sure you want to accept the below "
-                   "fingerprint from engine?\n"
-                   "{f}\n(y/n) ".format(f=reg.get_ca_fingerprint()))
-
-    print("User replied: [{r}]".format(r=yn))
-
-    if "y" in yn.lower():
-        reg.set_state("get_ssh")
-        reg.set_state("register")
-        reg.run()
-    else:
-        print("Okay aborting.. see you next time!")
+    print("Registration completed, host is pending approval "
+          "on Engine: {e}".format(e=args.engine_fqdn))

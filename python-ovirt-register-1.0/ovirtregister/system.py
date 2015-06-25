@@ -12,14 +12,13 @@
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
+import glob
 import os
-import uuid
 import selinux
 import subprocess
-import logging
 import platform
+import logging
 
-__EX_DMIDECODE = "/usr/sbin/dmidecode"
 __LOGGER = logging.getLogger(__name__)
 
 
@@ -64,65 +63,6 @@ def execute_cmd(sys_cmd, env_shell=False):
     return output, err, cmd.returncode
 
 
-def host_uuid():
-    """
-    Collect UUID of host in /etc/vdsm/vdsm.id.
-    In case it doesn't exist, it generated an UUID
-    based on dmidecode plus one of MAC address of machine
-    Format: UUID_MAC
-
-    Return:
-    UUID of host
-    """
-    __LOGGER.info("Processing UUID of host...")
-
-    __uuid = None
-    __vdsm_dir = "/etc/vdsm"
-    __vdsm_id = "{v}/vdsm.id".format(v=__vdsm_dir)
-
-    if os.path.exists(__vdsm_id):
-        with open(__vdsm_id, 'r') as f:
-            __uuid = f.read().strip("\n")
-        return __uuid
-
-    arch = platform.machine()
-    generated_uuid = False
-    if arch == 'x86_64':
-        out, err, ret = execute_cmd([__EX_DMIDECODE, "-s", "system-uuid"])
-
-        out = '\n'.join(line for line in out.splitlines()
-                        if not line.startswith('#'))
-
-        # Avoid error string- 'Not Settable' or 'Not Present'
-        if ret == 0 and "Not" not in out:
-            generated_uuid = out.replace("\n", "")
-    elif arch == "ppc64":
-        if os.path.exists('/proc/device-tree/system-id'):
-            # eg. output IBM,03061C14A
-            with open('/proc/device-tree/system-id') as f:
-                generated_uuid = f.readline().rstrip('\0').replace(",", "")
-
-    __mac_addr = ':'.join(
-        ("%012X" % uuid.getnode())[i:i+2] for i in range(0, 12, 2))
-
-    __uuid = "{uuid}_{mac}".format(uuid=generated_uuid,
-                                   mac=__mac_addr)
-
-    # Save the generated uuid in vdsm.id
-    if not os.path.exists(__vdsm_dir):
-        os.makedirs(__vdsm_dir, 0o755)
-        silent_restorecon(__vdsm_dir)
-
-    with open(__vdsm_id, 'w+') as f:
-        f.write(__uuid)
-
-    if node_image():
-        from ovirt.node.utils.fs import Config
-        Config().persist(__vdsm_id)
-
-    return __uuid
-
-
 def silent_restorecon(path):
     """Execute selinux restorecon cmd to determined file
     Args
@@ -134,3 +74,95 @@ def silent_restorecon(path):
             selinux.restorecon(path)
     except:
         __LOGGER.error("restorecon {p} failed".format(p=path), "error")
+
+
+def isOvirtNode():
+    return (os.path.exists('/etc/rhev-hypervisor-release') or
+            bool(glob.glob('/etc/ovirt-node-*-release')))
+
+
+def _getAllMacs():
+    """
+    This functions has been originally written in VDSM project.
+    Will be provided here to avoid the dependency project.
+    REQUIRED_FOR: Engine 3.3
+    """
+    # (
+    #     find /sys/class/net/*/device | while read f; do \
+    #         cat "$(dirname "$f")/address"; \
+    #     done; \
+    #     [ -d /proc/net/bonding ] && \
+    #         find /proc/net/bonding -type f -exec cat '{}' \; | \
+    #         grep 'Permanent HW addr:' | \
+    #         sed 's/.* //'
+    # ) | sed -e '/00:00:00:00/d' -e '/^$/d'
+
+    macs = []
+    for b in glob.glob('/sys/class/net/*/device'):
+        with open(os.path.join(os.path.dirname(b), "address")) as a:
+            mac = a.readline().replace("\n", "")
+        macs.append(mac)
+
+    for b in glob.glob('/proc/net/bonding/*'):
+        with open(b) as bond:
+            for line in bond:
+                if line.startswith("Permanent HW addr: "):
+                    macs.append(line.split(": ")[1].replace("\n", ""))
+
+    return set(macs) - set(["", "00:00:00:00:00:00"])
+
+
+def getHostUUID(legacy=True):
+    """
+    This functions has been originally written in VDSM project.
+    Will be provided here to avoid the dependency project.
+    """
+    __hostUUID = None
+    __VDSM_ID = "/etc/vdsm/vdsm.id"
+    __EX_DMIDECODE = "/usr/sbin/dmidecode"
+
+    try:
+        if os.path.exists(__VDSM_ID):
+            with open(__VDSM_ID) as f:
+                __hostUUID = f.readline().replace("\n", "")
+        else:
+            arch = platform.machine()
+            if arch in ('x86_64', 'i686'):
+                out, err, ret = execute_cmd([__EX_DMIDECODE, "-s",
+                                            "system-uuid"])
+                out = '\n'.join(line for line in out.splitlines()
+                                if not line.startswith('#'))
+
+                if ret == 0 and 'Not' not in out:
+                    # Avoid error string - 'Not Settable' or 'Not Present'
+                    __hostUUID = out.strip()
+                else:
+                    __LOGGER.warning('Could not find host UUID.')
+            elif arch in ('ppc', 'ppc64'):
+                # eg. output IBM,03061C14A
+                try:
+                    with open('/proc/device-tree/system-id') as f:
+                        systemId = f.readline()
+                        __hostUUID = systemId.rstrip('\0').replace(',', '')
+                except IOError:
+                    __LOGGER.warning('Could not find host UUID.')
+
+            if legacy:
+                try:
+                    mac = sorted(_getAllMacs())[0]
+                except:
+                    mac = ""
+                    __LOGGER.warning('Could not find host MAC.', exc_info=True)
+
+                # __hostUUID might contain the string 'None' returned
+                # from dmidecode call
+                if __hostUUID and __hostUUID is not 'None':
+                    __hostUUID += "_" + mac
+                else:
+                    __hostUUID = "_" + mac
+    except:
+        __LOGGER.error("Error retrieving host UUID", exc_info=True)
+
+    if legacy and not __hostUUID:
+        return 'None'
+    return __hostUUID
