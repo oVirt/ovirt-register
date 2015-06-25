@@ -20,7 +20,7 @@ BuildRequires: python2-devel
 BuildRequires: python-setuptools
 
 %description
-Python module for turning an OS into a oVirt Engine node
+Python script/module to register a host into oVirt Engine
 
 %prep
 %setup -q -n %{name}-%{version}
@@ -47,5 +47,8 @@ Python module for turning an OS into a oVirt Engine node
 %endif
 
 %changelog
+* Wed Jun Thu 24 2015 Douglas Schilling Landgraf <dougsland@redhat.com> 1.0-1
+- Support registration for Engine 3.3 or higher
+
 * Thu May 07 2015 Douglas Schilling Landgraf <dougsland@redhat.com> 1.0-0
 - Initial take
