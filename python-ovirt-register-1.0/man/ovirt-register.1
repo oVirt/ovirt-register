@@ -1,0 +1,47 @@
+.TH man 1 "25 Jun, 2015" "1.0" "ovirt-register man page"
+.SH NAME
+ovirt-register \- oVirt registration tool for hosts
+.SH SYNOPSIS
+ovirt-register --engine-fqdn ENGINE_FQDN [options]
+.SH DESCRIPTION
+\fBovirt-register\fP is a command line tool to register hosts to Engine.
+.SH OPTIONS
+.TP
+.B -h, --help
+Displays a list of options.
+.TP
+.B --engine-fqdn <engine fqdn>
+Specifies the Engine FQND for host registration (See also --check-fqdn)
+.TP
+.B --node-fqdn <node fqdn>
+Node FQDN or IP address. If not provided, will be used system host name.
+.TP
+.B --node-name <node name>
+Define the node name. If not provided, will be used system short host name (the name before the first dot in the system host name)
+.TP
+.B --engine-httpsport <https port>
+Define engine https port. If not provided, will be used 443.
+.TP
+.B --ssh-user
+SSH username to establish the connection with Engine. If not provided, the user which is executing the script will catch and used.
+.TP
+.B --ssh-port
+SSH port to establish the connection with Engine. If not provided, the script will use the default SSH port 22.
+.RE
+.TP
+.B --check-fqdn
+Disable or Enable FQDN check for Engine CA, this option is enabled by default (Use: True or False)
+.RE
+.TP
+.B --fingerprint
+Specify an existing fingerprint to be validated against Engine CA fingerprint.
+.RE
+.TP
+.B --vdsm-port
+Specify the listen port of VDSM. If not provided, will be used the default 54321
+.RE
+.SH BUGS
+Report bugs to <http://bugzilla.redhat.com>
+.SH COPYRIGHT
+Copyright 2015 Red Hat, Inc.
+License GPLv2: GNU GPL Version 2 <http://gnu.org/licenses/gpl.html>.

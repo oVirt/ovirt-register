@@ -30,6 +30,9 @@ Python script/module to register a host into oVirt Engine
 
 %install
 %{__python} setup.py install --skip-build --root %{buildroot}
+# install man page
+install -p -d -m755 %{buildroot}%{_mandir}/man1
+install -p -m644 man/ovirt-register.1 %buildroot%{_mandir}/man1/ovirt-register.1
 
 %files
 %defattr(-,root,root,-)
@@ -42,6 +45,7 @@ Python script/module to register a host into oVirt Engine
 %{python_sitelib}/%{libname}/register.py*
 %{python_sitelib}/%{libname}/system.py*
 %{_bindir}/ovirt-register
+%{_mandir}/man1/ovirt-register.1*
 %if (0%{?fedora} > 12 || 0%{?rhel} > 5)
 %{python_sitelib}/*.egg-info
 %endif
