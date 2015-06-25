@@ -47,7 +47,7 @@ Python script/module to register a host into oVirt Engine
 %endif
 
 %changelog
-* Wed Jun Thu 24 2015 Douglas Schilling Landgraf <dougsland@redhat.com> 1.0-1
+* Wed Jun 24 2015 Douglas Schilling Landgraf <dougsland@redhat.com> 1.0-1
 - Support registration for Engine 3.3 or higher
 
 * Thu May 07 2015 Douglas Schilling Landgraf <dougsland@redhat.com> 1.0-0
