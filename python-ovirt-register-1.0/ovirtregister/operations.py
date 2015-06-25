@@ -39,7 +39,7 @@ class Operations(object):
         self.ssh_port = ssh_port
         self.fprint = fprint
         self.ca_dir = "/etc/pki/ovirt-engine/"
-        self.ca_engine = "{d}{f}".format(d=self.ca_dir, f="ca.pem")
+        self.ca_engine = "{d}{f}".format(d=self.ca_dir, f="cert_ca_engine.pem")
         self.logger = logging.getLogger(__name__)
 
     def host_uuid(self):
@@ -151,7 +151,7 @@ class Operations(object):
         Download CA from Engine and save self.ca_engine
         """
         self.logger.info("Collecting CA data from Engine...")
-        # If engine CA dir doesnt exist create it and download the ca.pem
+        # If engine CA dir doesnt exist create and download cer_ca_engine.pem
         temp_ca_file = None
         if os.path.exists(self.ca_engine):
             calculated_fprint = self._calculate_fingerprint(self.ca_engine)
