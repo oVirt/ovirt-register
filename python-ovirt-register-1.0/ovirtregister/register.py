@@ -44,7 +44,7 @@ class Register(object):
 
         self.logger = logging.getLogger(__name__)
         self.logger.debug("=======================================")
-        self.logger.debug("Logging started")
+        self.logger.debug("ovirt-register has started")
         self.logger.debug("=======================================")
         self.logger.debug("Received the following attributes:")
 

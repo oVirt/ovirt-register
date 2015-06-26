@@ -16,6 +16,7 @@ import logging
 import os
 import pwd
 import ssl
+import sys
 import requests
 import tempfile
 
@@ -46,7 +47,8 @@ class Operations(object):
             # Disable unverified HTTPS requests warnings for pki download
             requests.packages.urllib3.disable_warnings()
         except Exception:
-            logging.captureWarnings(True)
+            if sys.version_info >= (2, 7, 0):
+                logging.captureWarnings(True)
 
         self.logger = logging.getLogger(__name__)
 

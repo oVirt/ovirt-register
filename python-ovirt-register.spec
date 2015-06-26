@@ -1,3 +1,7 @@
+%if 0%{?fedora} || 0%{?rhel} >= 7
+%global with_systemd 1
+%endif
+
 %if 0%{?fedora} || 0%{?rhel} >= 8
 %global with_python3 1
 %else
@@ -30,6 +34,9 @@ BuildRequires: python3-setuptools
 Requires: dmidecode
 Requires: python-requests
 Requires: libselinux-python
+%if 0%{?with_systemd}
+Requires: systemd-python
+%endif
 
 %description
 python ovirt register is a python 2 library for registering hosts
@@ -42,6 +49,7 @@ trigger the registration.
 Summary: A python 3 module and tool for registering nodes to oVirt Engine
 Requires: dmidecode
 Requires: python3-requests
+Requires: systemd-python
 Requires: libselinux-python3
 
 %description -n python3-ovirt-register
@@ -107,6 +115,7 @@ install -p -m644 man/ovirt-register.1 %buildroot%{_mandir}/man1/ovirt-register.1
 - Split package for python2 and python3
 - Improve persist/unpersist handling
 - Improve uuid handling
+- Improve logging
 
 * Thu May 07 2015 Douglas Schilling Landgraf <dougsland@redhat.com> 1.0-0
 - Initial take
