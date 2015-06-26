@@ -13,9 +13,10 @@
 # GNU General Public License for more details.
 import getpass
 import socket
-import operations
 import logging
-import system
+
+from . import system
+from . import operations
 
 
 class Register(object):

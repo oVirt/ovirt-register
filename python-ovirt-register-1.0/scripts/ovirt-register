@@ -114,8 +114,8 @@ def main():
                            "into {e}:\n {exc}".format(e=args.engine_fqdn,
                                                       exc=e))
 
-    print("Registration completed, host is pending approval "
-          "on Engine: {e}".format(e=args.engine_fqdn))
+    print(("Registration completed, host is pending approval "
+          "on Engine: {e}".format(e=args.engine_fqdn)))
 
     reg.logger.debug("Registration successfully triggered!")
 
