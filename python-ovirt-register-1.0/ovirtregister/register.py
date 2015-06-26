@@ -81,7 +81,7 @@ class Register(object):
         self.logger.debug("Fingerprint: {fp}".format(fp=self.fprint))
 
         self.node_image = False
-        if system.node_image():
+        if system.NodeImage().check():
             self.node_image = True
         self.logger.debug("Node image: {ni}".format(ni=self.node_image))
 

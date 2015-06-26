@@ -41,6 +41,13 @@ class Operations(object):
         self.fprint = fprint
         self.ca_dir = "/etc/pki/ovirt-engine/"
         self.ca_engine = "{d}{f}".format(d=self.ca_dir, f="cert_ca_engine.pem")
+
+        try:
+            # Disable unverified HTTPS requests warnings for pki download
+            requests.packages.urllib3.disable_warnings()
+        except Exception:
+            logging.captureWarnings(True)
+
         self.logger = logging.getLogger(__name__)
 
     def host_uuid(self):
@@ -48,7 +55,14 @@ class Operations(object):
         Determine host UUID and if there is no existing /etc/vdsm/vdsm.id
         it will genereate UUID and save/persist in /etc/vdsm/vdsm.id
         """
+        _uuid = None
+        __VDSM_ID = "/etc/vdsm/vdsm.id"
+
         self.logger.debug("Processing UUID of host...")
+
+        if os.path.exists(__VDSM_ID) and os.stat(__VDSM_ID).st_size == 0:
+            system.NodeImage().unpersist(__VDSM_ID)
+            os.unlink(__VDSM_ID)
 
         if self.reg_protocol == "legacy":
             # REQUIRED_FOR: Engine 3.3
@@ -62,12 +76,11 @@ class Operations(object):
 
         self.logger.debug("Registration via: {u}".format(u=self.url_reg))
 
-        __VDSM_ID = "/etc/vdsm/vdsm.id"
-        if not os.path.exists(__VDSM_ID):
+        if not os.path.exists(__VDSM_ID) and _uuid:
             with open(__VDSM_ID, 'w') as f:
-                f.write(self.uuid)
+                f.write(_uuid)
 
-            system.persist(__VDSM_ID)
+            system.NodeImage().persist(__VDSM_ID)
 
         self.logger.debug("Host UUID: {u}".format(u=_uuid))
 
@@ -158,7 +171,7 @@ class Operations(object):
             if not os.path.exists(self.ca_dir):
                 os.makedirs(self.ca_dir, 0o755)
                 system.silent_restorecon(self.ca_dir)
-                system.persist(self.ca_dir)
+                system.NodeImage().persist(self.ca_dir)
 
             if self.reg_protocol == "legacy":
                 # REQUIRED_FOR: Engine 3.3
@@ -196,7 +209,7 @@ class Operations(object):
         self.logger.debug("Calculated fingerprint: {f}".format(
                           f=self.fprint))
 
-        system.persist(self.ca_engine)
+        system.NodeImage().persist(self.ca_engine)
 
     def _calculate_fingerprint(self, cert):
         """Calculate fingerprint of certificate
@@ -233,7 +246,7 @@ class Operations(object):
         if not os.path.exists(_auth_keys_dir):
             os.makedirs(_auth_keys_dir, 0o700)
             system.silent_restorecon(_auth_keys_dir)
-            system.persist(_auth_keys_dir)
+            system.NodeImage().persist(_auth_keys_dir)
             os.chown(_auth_keys_dir, _uid, _uid)
 
         res = self._execute_http_request(self.url_ssh_key)
@@ -254,7 +267,7 @@ class Operations(object):
             os.chown(_auth_keys, _uid, _uid)
 
         os.unlink(f.name)
-        system.persist(_auth_keys)
+        system.NodeImage().persist(_auth_keys)
 
     def execute_registration(self):
         """

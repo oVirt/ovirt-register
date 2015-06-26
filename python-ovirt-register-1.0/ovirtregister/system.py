@@ -60,17 +60,6 @@ def silent_restorecon(path):
         __LOGGER.error("restorecon {p} failed".format(p=path), "error")
 
 
-def node_image():
-    """
-    Check if the OS running is a node image
-
-    Returns:
-    True or False
-    """
-    return (os.path.exists('/etc/rhev-hypervisor-release') or
-            bool(glob.glob('/etc/ovirt-node-*-release')))
-
-
 def _getAllMacs():
     """
     This functions has been originally written in VDSM project.
@@ -102,20 +91,48 @@ def _getAllMacs():
     return set(macs) - set(["", "00:00:00:00:00:00"])
 
 
-def persist(filename):
+class NodeImage(object):
     """
     REQUIRED: oVirt Node until 3.6
+
     To save the change across reboot, oVirt Node requires
     to call the persist API.
+
+    To remove a file, it's required to do unpersist first
     """
-    if node_image():
+    def __init__(self):
+        self.logger = logging.getLogger(__name__)
+
+    def persist(self, fname=None):
         try:
-            from ovirt.node.utils.fs import Config
-            Config().persist(filename)
+            if self.check() and fname is not None:
+                from ovirt.node.utils.fs import Config
+                Config().persist(fname)
         except Exception as e:
-            __LOGGER.exception("Exception: {exp}".format(exp=e))
-            raise RuntimeError("Cannot persist: {f}:\n {exc}".format(
-                               f=filename,
+            self.logger.exception("Exception: {exp}".format(exp=e))
+            raise RuntimeError("Cannot persist {f}:\n {exc}".format(
+                               f=fname,
+                               exc=e))
+
+    def check(self):
+        """
+        Check if the OS running is a node image
+
+        Returns:
+        True or False
+        """
+        return (os.path.exists('/etc/rhev-hypervisor-release') or
+                bool(glob.glob('/etc/ovirt-node-*-release')))
+
+    def unpersist(self, fname):
+        try:
+            if self.check() and fname is not None:
+                from ovirt.node.utils.fs import Config
+                Config().unpersist(fname)
+        except Exception as e:
+            self.logger.exception("Exception: {exp}".format(exp=e))
+            raise RuntimeError("Cannot unpersist {f}:\n {exc}".format(
+                               f=fname,
                                exc=e))
 
 
