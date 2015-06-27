@@ -9,6 +9,7 @@
 %{!?python2_sitelib2: %global python2_sitelib %(%{__python2} -c "from distutils.sysconfig import get_python_lib; print (get_python_lib())")}
 %endif
 
+%{!?_licensedir:%global license %%doc}
 %global modname ovirtregister
 
 Name:           python-ovirt-register
@@ -20,7 +21,6 @@ Group:          System Environment/Libraries
 URL:            https://github.com/dougsland/ovirt-register/wiki
 Source0:        https://github.com/dougsland/ovirt-register/raw/master/%{name}-%{version}.tar.gz
 
-BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 BuildArch:      noarch
 
 BuildRequires: python2-devel
@@ -91,8 +91,8 @@ install -p -m644 man/ovirt-register.1 %buildroot%{_mandir}/man1/ovirt-register.1
 
 %files
 %doc AUTHORS docs/PROTOCOL
-%{!?_licensedir:%global license %%doc}
 %license COPYING
+%dir %{python2_sitelib}/%{modname}
 %{python2_sitelib}/%{modname}/*
 %{python2_sitelib}/*.egg-info
 %{_bindir}/ovirt-register
@@ -101,8 +101,8 @@ install -p -m644 man/ovirt-register.1 %buildroot%{_mandir}/man1/ovirt-register.1
 %if 0%{?with_python3}
 %files -n python3-ovirt-register
 %doc AUTHORS docs/PROTOCOL
-%{!?_licensedir:%global license %%doc}
 %license COPYING
+%dir %{python3_sitelib}/%{modname}
 %{python3_sitelib}/%{modname}/*
 %{python3_sitelib}/*.egg-info
 %{_bindir}/ovirt-register
