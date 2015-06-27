@@ -4,12 +4,13 @@
 
 %if 0%{?fedora} || 0%{?rhel} >= 8
 %global with_python3 1
+%else
+%global with_python2 1
 %endif
 
 %{!?__python2: %global __python2 /usr/bin/python2}
+%{!?py2dir: %global py2dir %{_builddir}/%{name}-%{version}}
 %{!?python2_sitelib2: %global python2_sitelib %(%{__python2} -c "from distutils.sysconfig import get_python_lib; print (get_python_lib())")}
-
-%{!?_licensedir:%global license %%doc}
 
 %global modname ovirt_register
 
@@ -38,6 +39,8 @@ Requires: libselinux-python
 %if 0%{?with_systemd}
 Requires: systemd-python
 %endif
+
+%{!?_licensedir:%global license %%doc}
 
 %description
 python ovirt register is a python 2 library for registering hosts
@@ -75,14 +78,23 @@ pushd %{py3dir}
 popd
 %endif
 
+%if 0%{?with_python2}
+pushd %{py2dir}
 %{__python2} setup.py build
+popd
+%endif
+
 
 %install
-%{__python2} setup.py install --skip-build --root %{buildroot}
-
 %if 0%{?with_python3}
 pushd %{py3dir}
 %{__python3} setup.py install --skip-build --root %{buildroot}
+popd
+%endif
+
+%if 0%{?with_python2}
+pushd %{py2dir}
+%{__python2} setup.py install --skip-build --root %{buildroot}
 popd
 %endif
 
@@ -90,6 +102,7 @@ popd
 install -p -d -m755 %{buildroot}%{_mandir}/man1
 install -p -m644 man/ovirt-register.1 %buildroot%{_mandir}/man1/ovirt-register.1
 
+%if 0%{?with_python2}
 %files
 %doc AUTHORS docs/PROTOCOL
 %license COPYING
@@ -98,6 +111,7 @@ install -p -m644 man/ovirt-register.1 %buildroot%{_mandir}/man1/ovirt-register.1
 %{python2_sitelib}/*.egg-info
 %{_bindir}/ovirt-register
 %{_mandir}/man1/ovirt-register.1.gz
+%endif
 
 %if 0%{?with_python3}
 %files -n python3-ovirt-register
