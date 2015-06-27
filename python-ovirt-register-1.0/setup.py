@@ -26,5 +26,5 @@ setup(name='ovirt-register',
           'Programming Language :: Python',
           ],
       license= 'GPLv2+',
-      packages=['ovirtregister'],
+      packages=['ovirt_register'],
       scripts = ['scripts/ovirt-register'])

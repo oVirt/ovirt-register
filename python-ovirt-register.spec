@@ -4,13 +4,14 @@
 
 %if 0%{?fedora} || 0%{?rhel} >= 8
 %global with_python3 1
-%else
-%{!?__python2: %global __python2 /usr/bin/python2}
-%{!?python2_sitelib2: %global python2_sitelib %(%{__python2} -c "from distutils.sysconfig import get_python_lib; print (get_python_lib())")}
 %endif
 
+%{!?__python2: %global __python2 /usr/bin/python2}
+%{!?python2_sitelib2: %global python2_sitelib %(%{__python2} -c "from distutils.sysconfig import get_python_lib; print (get_python_lib())")}
+
 %{!?_licensedir:%global license %%doc}
-%global modname ovirtregister
+
+%global modname ovirt_register
 
 Name:           python-ovirt-register
 Version:        1.0
@@ -49,7 +50,7 @@ trigger the registration.
 Summary: A python 3 module and tool for registering nodes to oVirt Engine
 Requires: dmidecode
 Requires: python3-requests
-Requires: systemd-python
+Requires: systemd-python3
 Requires: libselinux-python3
 
 %description -n python3-ovirt-register

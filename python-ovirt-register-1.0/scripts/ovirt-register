@@ -15,7 +15,7 @@ import argparse
 import logging
 import sys
 
-from ovirtregister import register
+from ovirt_register import register
 
 
 def set_logger(logfile_path=None):
