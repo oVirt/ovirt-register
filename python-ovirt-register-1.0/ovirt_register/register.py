@@ -25,6 +25,7 @@ class Register(object):
                  ssh_user=None, ssh_port=None,
                  node_fqdn=None, fingerprint=None,
                  vdsm_port=None, check_fqdn=True,
+                 ca_file=None,
                  engine_https_port=None):
 
         """
@@ -36,6 +37,7 @@ class Register(object):
         check_fqdn  - Validate Engine FQDN against CA (True or False)
         ssh_user    - SSH user that will establish the connection from Engine
         ssh_port    - The ssh port
+        ca_file     - Store the CA file from oVirt Engine
         fingerprint - Validate the fingerprint provided against Engine CA
         node_fqdn   - Node FQDN or address accessible from Engine
         vdsm_port   - Communication port between node and engine, default 54321
@@ -70,6 +72,8 @@ class Register(object):
         self.logger.debug("Engine URL: {url}".format(url=self.engine_url))
         self.logger.debug("Engine https port: {hp}".format(
                           hp=self.engine_port))
+
+        self.ca_file = ca_file
 
         if ssh_user is None:
             self.ssh_user = getpass.getuser()
@@ -167,7 +171,7 @@ class Register(object):
         """
         Get the PEM
         """
-        return self.op.download_ca()
+        return self.op.download_ca(self.ca_file)
 
     def __execute_registration(self):
         """

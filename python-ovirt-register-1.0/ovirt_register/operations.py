@@ -15,6 +15,7 @@ import hashlib
 import logging
 import os
 import pwd
+import shutil
 import ssl
 import sys
 import requests
@@ -30,6 +31,7 @@ class Operations(object):
                  vdsm_port, engine_url, engine_port):
 
         self.fprint = None
+        self.ca_engine = None
         self.engine_url = engine_url
         self.engine_port = engine_port
         self.engine_fqdn = engine_fqdn
@@ -40,8 +42,6 @@ class Operations(object):
         self.ssh_user = ssh_user
         self.ssh_port = ssh_port
         self.fprint = fprint
-        self.ca_dir = "/etc/pki/ovirt-engine/"
-        self.ca_engine = "{d}{f}".format(d=self.ca_dir, f="cert_ca_engine.pem")
 
         try:
             # Disable unverified HTTPS requests warnings for pki download
@@ -160,15 +160,27 @@ class Operations(object):
         self.logger.debug("Download CA via: {u}".format(u=self.url_CA))
         self.logger.debug("Download SSH via: {u}".format(u=self.url_ssh_key))
 
-    def download_ca(self):
+    def download_ca(self, ca_file):
         """
-        Download CA from Engine and save self.ca_engine
+        Download CA from Engine and save in the filesystem if ca_file is
+        specified
         """
         self.logger.debug("Collecting CA data from Engine...")
-        # If engine CA dir doesnt exist create and download cert_ca_engine.pem
-        temp_ca_file = None
-        if os.path.exists(self.ca_engine):
+
+        temp_ca_file = False
+        cert_exists = False
+
+        self.ca_engine = ca_file
+
+        if self.ca_engine is None:
+            self.ca_dir = "/tmp"
+            temp_ca_file = True
+        else:
+            self.ca_dir = os.path.dirname(self.ca_engine)
+
+        if self.ca_engine and os.path.exists(self.ca_engine):
             calculated_fprint = self._calculate_fingerprint(self.ca_engine)
+            cert_exists = True
         else:
             if not os.path.exists(self.ca_dir):
                 os.makedirs(self.ca_dir, 0o755)
@@ -185,13 +197,12 @@ class Operations(object):
                                                  cert_validation=False)
 
             with tempfile.NamedTemporaryFile(
-                dir=os.path.dirname(self.ca_dir),
+                dir=self.ca_dir,
                 delete=False
             ) as f:
                 f.write(res)
 
             calculated_fprint = self._calculate_fingerprint(f.name)
-            temp_ca_file = True
 
         if self.fprint and self.fprint.lower() != calculated_fprint.lower():
             msg = "The fingeprints doesn't match:\n" \
@@ -200,18 +211,18 @@ class Operations(object):
                                                          a=self.fprint)
 
             self.logger.error(msg)
-            if temp_ca_file:
-                os.unlink(f.name)
             raise RuntimeError(msg)
 
+        if not cert_exists and not temp_ca_file:
+            shutil.move(f.name, self.ca_engine)
+            system.NodeImage().persist(self.ca_engine)
+
         if temp_ca_file:
-            os.rename(f.name, self.ca_engine)
+            os.unlink(f.name)
 
         self.fprint = calculated_fprint
         self.logger.debug("Calculated fingerprint: {f}".format(
                           f=self.fprint))
-
-        system.NodeImage().persist(self.ca_engine)
 
     def _calculate_fingerprint(self, cert):
         """Calculate fingerprint of certificate
@@ -252,24 +263,21 @@ class Operations(object):
             os.chown(_auth_keys_dir, _uid, _uid)
 
         res = self._execute_http_request(self.url_ssh_key)
-        with tempfile.NamedTemporaryFile(
-            dir=_auth_keys_dir,
-            delete=False
-        ) as f:
-            f.write(res)
+        http_res_str = res.decode("utf-8")
 
-        # If ssh key is new append it into autorized_keys
-        with open(f.name, "r") as f_ro:
-            content = f_ro.read()
-            with open(_auth_keys, "a+") as f_w:
-                if content not in f_w.read():
-                    f_w.write(content)
-                    os.chmod(_auth_keys, 0o600)
-                    system.silent_restorecon(_auth_keys)
+        # If authorized file exists, check if already exist
+        # the entry
+        if os.path.exists(_auth_keys):
+            with open(_auth_keys, "r") as f_ro:
+                if http_res_str.strip() in f_ro.read().strip():
+                    return
+
+        with open(_auth_keys, "a") as f_w:
+            f_w.write(http_res_str)
+            os.chmod(_auth_keys, 0o600)
             os.chown(_auth_keys, _uid, _uid)
-
-        os.unlink(f.name)
-        system.NodeImage().persist(_auth_keys)
+            system.silent_restorecon(_auth_keys,)
+            system.NodeImage().persist(_auth_keys,)
 
     def execute_registration(self):
         """

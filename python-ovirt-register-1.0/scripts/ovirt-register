@@ -115,6 +115,12 @@ def main():
     )
 
     parser.add_argument(
+        '--cafile',
+        help="Specify the full path for the CA file, it will be created"
+             " if doesn't exist."
+    )
+
+    parser.add_argument(
         '--vdsm-port',
         help="The port to be used in the communication between the "
              "node agent and Engine, if not provided will be used "
@@ -131,6 +137,7 @@ def main():
                             ssh_port=args.ssh_port,
                             fingerprint=args.fingerprint,
                             vdsm_port=args.vdsm_port,
+                            ca_file=args.cafile,
                             check_fqdn=args.check_fqdn)
 
     try:
