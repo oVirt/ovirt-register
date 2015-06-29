@@ -15,6 +15,8 @@ import getpass
 import socket
 import logging
 
+from distutils.util import strtobool
+
 from . import system
 from . import operations
 
@@ -25,7 +27,8 @@ class Register(object):
                  ssh_user=None, ssh_port=None,
                  node_fqdn=None, fingerprint=None,
                  vdsm_port=None, check_fqdn=True,
-                 ca_file=None,
+                 ca_file=None, force_uuid=None,
+                 persist_uuid=None,
                  engine_https_port=None):
 
         """
@@ -41,6 +44,10 @@ class Register(object):
         fingerprint - Validate the fingerprint provided against Engine CA
         node_fqdn   - Node FQDN or address accessible from Engine
         vdsm_port   - Communication port between node and engine, default 54321
+        force_uuid  - Force the UUID of machine. It's useful for machines
+                      that provides duplicate UUID.
+        persist_uuid- Save the UUID in the disk /etc/vdsm/vdsm.id
+                      (True or False) Default: True
         engine_https_port - Engine https port
         """
 
@@ -74,6 +81,18 @@ class Register(object):
                           hp=self.engine_port))
 
         self.ca_file = ca_file
+        if self.ca_file:
+            self.logger.debug("CA File: {cf}".format(cf=self.ca_file))
+
+        self.force_uuid = force_uuid
+        if self.force_uuid:
+            self.logger.debug("Force UUID: {fu}".format(fu=self.force_uuid))
+
+        if persist_uuid is None:
+            self.persist_uuid = True
+        else:
+            self.logger.debug("Persist UUID: {pu}".format(pu=persist_uuid))
+            self.persist_uuid = strtobool(persist_uuid)
 
         if ssh_user is None:
             self.ssh_user = getpass.getuser()
@@ -159,7 +178,7 @@ class Register(object):
         """
         Returns the host uuid
         """
-        return self.op.host_uuid()
+        return self.op.host_uuid(self.force_uuid, self.persist_uuid)
 
     def __get_protocol(self):
         """

@@ -47,6 +47,15 @@ Specify the listen port of VDSM. If not provided, will be used the default 54321
 .B --log <file path>
 Specify a file to redirect the log
 .RE
+.TP
+.B --force-uuid <UUID>
+Force the UUID of machine. It's useful for machines that provides duplicate UUID.
+You might generate the UUID with: cat /proc/sys/kernel/random/uuid
+.RE
+.TP
+.B --persist-uuid
+Save the UUID in the disk (/etc/vdsm/vdsm.id). The default behaviour is save into the disk. (Use: True or False)
+.RE
 .SH BUGS
 Report bugs to <http://bugzilla.redhat.com>
 .SH COPYRIGHT

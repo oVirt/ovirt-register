@@ -126,6 +126,18 @@ def main():
              "node agent and Engine, if not provided will be used "
              "the default port 54321"
     )
+
+    parser.add_argument(
+        '--force-uuid',
+        help="Force the UUID of machine. It's useful for machines "
+             "that provides duplicate UUID."
+    )
+
+    parser.add_argument(
+        '--persist-uuid',
+        help="Save the UUID in the disk (/etc/vdsm/vdsm.id)."
+             "The default behaviour is save into the disk. (Use: True or False)"
+    )
     args = parser.parse_args()
 
     set_logger(args.log)
@@ -138,7 +150,10 @@ def main():
                             fingerprint=args.fingerprint,
                             vdsm_port=args.vdsm_port,
                             ca_file=args.cafile,
-                            check_fqdn=args.check_fqdn)
+                            check_fqdn=args.check_fqdn,
+                            force_uuid=args.force_uuid,
+                            persist_uuid=args.persist_uuid
+    )
 
     try:
         reg.set_state("get_protocol")

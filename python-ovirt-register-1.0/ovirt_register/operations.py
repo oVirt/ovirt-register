@@ -52,13 +52,21 @@ class Operations(object):
 
         self.logger = logging.getLogger(__name__)
 
-    def host_uuid(self):
+    def host_uuid(self, force_uuid=None, persist_uuid=True):
         """
-        Determine host UUID and if there is no existing /etc/vdsm/vdsm.id
+        Determine host UUID. If there is no existing /etc/vdsm/vdsm.id
         it will genereate UUID and save/persist in /etc/vdsm/vdsm.id
+
+        Args:
+        force_uuid   -- UUID that will be used for registration.
+                        Useful for machine that duplicates uuid.
+
+        persist_uuid -- Save the UUID into the disk (/etc/vdsm/vdsm.id)
+                        (True or False)
         """
         _uuid = None
-        __VDSM_ID = "/etc/vdsm/vdsm.id"
+        __VDSM_DIR = "/etc/vdsm/"
+        __VDSM_ID = "{d}/vdsm.id".format(d=__VDSM_DIR)
 
         self.logger.debug("Processing UUID of host...")
 
@@ -66,20 +74,31 @@ class Operations(object):
             system.NodeImage().unpersist(__VDSM_ID)
             os.unlink(__VDSM_ID)
 
+        if not os.path.exists(__VDSM_DIR) and persist_uuid:
+            os.makedirs(__VDSM_DIR, 0o755)
+
         if self.reg_protocol == "legacy":
             # REQUIRED_FOR: Engine 3.3
             # The legacy version uses the format: UUID_MACADDRESS
-            _uuid = system.getHostUUID(legacy=True)
+            if force_uuid is None:
+                _uuid = system.getHostUUID(legacy=True)
+            else:
+                _uuid = force_uuid
+
             self.url_reg += "&vds_unique_id={u}".format(u=_uuid)
         else:
             # Non legacy version uses the format: UUID
-            _uuid = system.getHostUUID(legacy=False)
+            if force_uuid is None:
+                _uuid = system.getHostUUID(legacy=False)
+            else:
+                _uuid = force_uuid
+
             self.url_reg += "&uniqueId={u}".format(u=_uuid)
 
         self.logger.debug("Registration via: {u}".format(u=self.url_reg))
 
-        if not os.path.exists(__VDSM_ID) and _uuid:
-            with open(__VDSM_ID, 'w') as f:
+        if _uuid and persist_uuid:
+            with open(__VDSM_ID, 'w+') as f:
                 f.write(_uuid)
 
             system.NodeImage().persist(__VDSM_ID)
