@@ -26,7 +26,7 @@ class Register(object):
     def __init__(self, engine_fqdn, node_name=None,
                  ssh_user=None, ssh_port=None,
                  node_fqdn=None, fingerprint=None,
-                 vdsm_port=None, check_fqdn=True,
+                 vdsm_port=None, check_fqdn=None,
                  ca_file=None, force_uuid=None,
                  persist_uuid=None,
                  engine_https_port=None):
@@ -63,7 +63,12 @@ class Register(object):
             self.node_name = node_name
         self.logger.debug("Node name: {name}".format(name=self.node_name))
 
-        self.check_fqdn = check_fqdn
+        if check_fqdn is None:
+            self.check_fqdn = True
+        else:
+            self.logger.debug("Check FQDN: {u}".format(u=check_fqdn))
+            self.check_fqdn = strtobool(check_fqdn)
+
         self.engine_fqdn = engine_fqdn
         self.logger.debug("Engine FQDN: {efqdn}".format(
                           efqdn=self.engine_fqdn))

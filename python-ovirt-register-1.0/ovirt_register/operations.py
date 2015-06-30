@@ -32,6 +32,7 @@ class Operations(object):
 
         self.fprint = None
         self.ca_engine = None
+        self.temp_ca_file = None
         self.engine_url = engine_url
         self.engine_port = engine_port
         self.engine_fqdn = engine_fqdn
@@ -65,7 +66,7 @@ class Operations(object):
                         (True or False)
         """
         _uuid = None
-        __VDSM_DIR = "/etc/vdsm/"
+        __VDSM_DIR = "/etc/vdsm"
         __VDSM_ID = "{d}/vdsm.id".format(d=__VDSM_DIR)
 
         self.logger.debug("Processing UUID of host...")
@@ -113,16 +114,21 @@ class Operations(object):
 
         Returns: Content of http request
         """
-        if self.check_fqdn:
-            cert_validation = self.ca_engine
-        else:
+        if not self.check_fqdn or not cert_validation:
             cert_validation = False
+        else:
+            cert_validation = self.ca_engine
 
-        res = requests.get("{u}".format(u=url), verify=cert_validation)
-        if res.status_code != 200:
-            raise requests.RequestException(
-                "http response was non OK, code {r}".format(r=res.status_code)
-            )
+        try:
+            res = requests.get("{u}".format(u=url), verify=cert_validation)
+            if res.status_code != 200:
+                raise requests.RequestException(
+                    "http response was non OK, code {r}".format(r=res.status_code)
+                )
+        except Exception:
+            if self.temp_ca_file and os.path.exists(self.ca_engine):
+                os.unlink(self.ca_engine)
+            raise
 
         return res.content
 
@@ -186,14 +192,13 @@ class Operations(object):
         """
         self.logger.debug("Collecting CA data from Engine...")
 
-        temp_ca_file = False
         cert_exists = False
 
         self.ca_engine = ca_file
 
         if self.ca_engine is None:
             self.ca_dir = "/tmp"
-            temp_ca_file = True
+            self.temp_ca_file = True
         else:
             self.ca_dir = os.path.dirname(self.ca_engine)
 
@@ -232,12 +237,12 @@ class Operations(object):
             self.logger.error(msg)
             raise RuntimeError(msg)
 
-        if not cert_exists and not temp_ca_file:
+        if not cert_exists and not self.temp_ca_file:
             shutil.move(f.name, self.ca_engine)
             system.NodeImage().persist(self.ca_engine)
 
-        if temp_ca_file:
-            os.unlink(f.name)
+        if self.temp_ca_file:
+            self.ca_engine = f.name
 
         self.fprint = calculated_fprint
         self.logger.debug("Calculated fingerprint: {f}".format(
@@ -304,3 +309,6 @@ class Operations(object):
         """
         self.logger.debug("Registration URL: %s" % self.url_reg)
         self._execute_http_request(self.url_reg)
+
+        if self.temp_ca_file and os.path.exists(self.ca_engine):
+            os.unlink(self.ca_engine)
