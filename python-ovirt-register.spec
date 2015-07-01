@@ -106,7 +106,7 @@ install -p -m644 man/ovirt-register.1 %buildroot%{_mandir}/man1/ovirt-register.1
 
 %if 0%{?with_python2}
 %files
-%doc AUTHORS docs/PROTOCOL
+%doc AUTHORS docs/PROTOCOL docs/README
 %license COPYING
 %dir %{python2_sitelib}/%{modname}
 %{python2_sitelib}/%{modname}/*
@@ -117,7 +117,7 @@ install -p -m644 man/ovirt-register.1 %buildroot%{_mandir}/man1/ovirt-register.1
 
 %if 0%{?with_python3}
 %files -n python3-ovirt-register
-%doc AUTHORS docs/PROTOCOL
+%doc AUTHORS docs/PROTOCOL docs/README
 %license COPYING
 %dir %{python3_sitelib}/%{modname}
 %{python3_sitelib}/%{modname}/*
