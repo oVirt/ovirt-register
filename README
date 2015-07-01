@@ -131,16 +131,17 @@ Logging:
 
     The ovirt-register tool uses journal or syslog (/var/log/messages), it
     depends what the system is running. If you would like to save the logging
-    output in a file instead of keeping it into the system, use --log my_log_file
+    output in a file instead of keeping it into the system, use
+    --log my_log_file
 
     Example of reading journal (last 50 lines):
-        # journalctl -n50 -x --no-page
+    # journalctl -n50 -x --no-page
 
     Example of reading messages:
-        # tail -f /var/log/messages
+    # tail -f /var/log/messages
 
     Example setting a log file:
-        # ovirt-register --engine-fqdn engine.local --log /tmp/ovirt-register.log
+    # ovirt-register --engine-fqdn engine.local --log /tmp/ovirt-register.log
 
 Troubleshooting:
 ========================
