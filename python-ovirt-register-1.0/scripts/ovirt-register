@@ -15,7 +15,7 @@ import argparse
 import logging
 import sys
 
-from ovirt_register import register
+from ovirt_register.register import Register
 
 
 def set_logger(logfile_path=None):
@@ -26,7 +26,7 @@ def set_logger(logfile_path=None):
         logging.basicConfig(
             filename=logfile_path,
             level=logging.DEBUG,
-            format='%(asctime)s %(message)s',
+            format='%(name)s %(asctime)s %(message)s',
             datefmt='%m/%d/%Y %I:%M:%S %p'
         )
         return
@@ -42,13 +42,14 @@ def set_logger(logfile_path=None):
     log.setLevel(logging.DEBUG)
 
     try:
-        log.addHandler(
-            journal.JournalHandler(SYSLOG_IDENTIFIER='ovirt-register')
-        )
+        formatter = logging.Formatter("%(name)s %(message)s")
+        jhandler = journal.JournalHandler()
+        jhandler.setLevel(logging.DEBUG)
+        jhandler.setFormatter(formatter)
+        log.addHandler(jhandler)
     except UnboundLocalError:
         syslog = SysLogHandler(address="/dev/log")
-        formatter = logging.Formatter("ovirt-register: %(name)s %(levelname)s"
-                                      " %(message)s")
+        formatter = logging.Formatter("%(name)s %(asctime)s %(message)s")
         syslog.setFormatter(formatter)
         log.addHandler(syslog)
 
@@ -98,9 +99,11 @@ def main():
     )
 
     parser.add_argument(
-        '--check-fqdn',
-        help="Disable or Enable FQDN check for Engine CA, this option "
-             "is enabled by default (Use: True or False)",
+        '--nocheck-fqdn',
+        default=True,
+        action='store_false',
+        help="Disable FQDN check for Engine CA, this option "
+             "is enabled by default",
     )
 
     parser.add_argument(
@@ -134,39 +137,56 @@ def main():
     )
 
     parser.add_argument(
-        '--persist-uuid',
-        help="Save the UUID in the disk (/etc/vdsm/vdsm.id)."
-             "The default behaviour is save into the disk. (Use: True or False)"
+        '--nopersist-uuid',
+        default=True,
+        action='store_false',
+        help="Do not save the UUID in the disk (/etc/vdsm/vdsm.id)."
+             "The default behaviour is save into the disk (Use: True or False)"
     )
     args = parser.parse_args()
 
     set_logger(args.log)
-    reg = register.Register(engine_fqdn=args.engine_fqdn,
-                            engine_https_port=args.engine_https_port,
-                            node_fqdn=args.node_fqdn,
-                            node_name=args.node_name,
-                            ssh_user=args.ssh_user,
-                            ssh_port=args.ssh_port,
-                            fingerprint=args.fingerprint,
-                            vdsm_port=args.vdsm_port,
-                            ca_file=args.cafile,
-                            check_fqdn=args.check_fqdn,
-                            force_uuid=args.force_uuid,
-                            persist_uuid=args.persist_uuid
-    )
+    reg = Register(engine_fqdn=args.engine_fqdn,
+                   engine_https_port=args.engine_https_port,
+                   node_fqdn=args.node_fqdn,
+                   node_name=args.node_name,
+                   ssh_user=args.ssh_user,
+                   ssh_port=args.ssh_port,
+                   fingerprint=args.fingerprint,
+                   vdsm_port=args.vdsm_port,
+                   ca_file=args.cafile,
+                   check_fqdn=args.nocheck_fqdn)
 
     try:
-        reg.set_state("get_protocol")
-        reg.set_state("get_host_uuid")
-        reg.set_state("get_ca")
-        reg.set_state("get_ssh")
-        reg.set_state("register")
-        reg.run()
+        reg.detect_reg_protocol()
+
+        uuid = reg.collect_host_uuid(force_uuid=args.force_uuid,
+                                     persist_uuid=args.nopersist_uuid)
+
+        reg.pki_trust()
+        ssh_trust = reg.ssh_trust()
+        reg.execute_registration()
     except Exception as e:
         reg.logger.exception("Exception: {exp}".format(exp=e))
         raise RuntimeError("Cannot register this host "
                            "into {e}:\n {exc}".format(e=args.engine_fqdn,
                                                       exc=e))
+
+    print("Host UUID:")
+    print("============================")
+    print(("\t{0}\n".format(uuid)))
+
+    print("PEM file data:")
+    print("============================")
+    print(("\t{0}\n".format(reg.get_pem_data())))
+
+    print("Fingerprint:")
+    print("============================")
+    print(("\t{0}\n".format(reg.get_pem_fingerprint())))
+
+    print("Authorized keys file:")
+    print("============================")
+    print(("\t{0}\n".format(ssh_trust)))
 
     print(("Registration completed, host is pending approval "
           "on Engine: {e}".format(e=args.engine_fqdn)))

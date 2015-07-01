@@ -33,6 +33,7 @@ BuildRequires: python3-devel
 BuildRequires: python3-setuptools
 %endif
 
+Requires: pyOpenSSL
 Requires: dmidecode
 Requires: python-requests
 Requires: libselinux-python
@@ -52,6 +53,7 @@ trigger the registration.
 %package -n python3-ovirt-register
 Summary: A python 3 module and tool for registering nodes to oVirt Engine
 Requires: dmidecode
+Requires: python3-pyOpenSSL
 Requires: python3-requests
 Requires: systemd-python3
 Requires: libselinux-python3

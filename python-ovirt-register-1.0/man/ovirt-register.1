@@ -29,8 +29,8 @@ SSH username to establish the connection with Engine. If not provided, the user 
 SSH port to establish the connection with Engine. If not provided, the script will use the default SSH port 22.
 .RE
 .TP
-.B --check-fqdn
-Disable or Enable FQDN check for Engine CA, this option is enabled by default (Use: True or False)
+.B --nocheck-fqdn
+Disable FQDN check for Engine CA, this option is enabled by default
 .RE
 .TP
 .B --cafile
@@ -53,8 +53,8 @@ Force the UUID of machine. It's useful for machines that provides duplicate UUID
 You might generate the UUID with: cat /proc/sys/kernel/random/uuid
 .RE
 .TP
-.B --persist-uuid
-Save the UUID in the disk (/etc/vdsm/vdsm.id). The default behaviour is save into the disk. (Use: True or False)
+.B --nopersist-uuid
+Do not Save the UUID in the disk (/etc/vdsm/vdsm.id). The default behaviour is save into the disk. (Use: True or False)
 .RE
 .SH BUGS
 Report bugs to <http://bugzilla.redhat.com>

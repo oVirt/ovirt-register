@@ -11,14 +11,20 @@
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
+import os
 import getpass
 import socket
+import sys
 import logging
 
-from distutils.util import strtobool
+import requests
 
 from . import system
-from . import operations
+
+from .uuid import UUID
+from .pki import PKI
+from .ssh import SSH
+from .http import HTTP
 
 
 class Register(object):
@@ -27,9 +33,7 @@ class Register(object):
                  ssh_user=None, ssh_port=None,
                  node_fqdn=None, fingerprint=None,
                  vdsm_port=None, check_fqdn=None,
-                 ca_file=None, force_uuid=None,
-                 persist_uuid=None,
-                 engine_https_port=None):
+                 ca_file=None, engine_https_port=None):
 
         """
         The Register goal is to register any host againt Engine
@@ -44,12 +48,15 @@ class Register(object):
         fingerprint - Validate the fingerprint provided against Engine CA
         node_fqdn   - Node FQDN or address accessible from Engine
         vdsm_port   - Communication port between node and engine, default 54321
-        force_uuid  - Force the UUID of machine. It's useful for machines
-                      that provides duplicate UUID.
-        persist_uuid- Save the UUID in the disk /etc/vdsm/vdsm.id
-                      (True or False) Default: True
         engine_https_port - Engine https port
         """
+
+        try:
+            # Disable unverified HTTPS requests warnings for pki download
+            requests.packages.urllib3.disable_warnings()
+        except Exception:
+            if sys.version_info >= (2, 7, 0):
+                logging.captureWarnings(True)
 
         self.logger = logging.getLogger(__name__)
         self.logger.debug("=======================================")
@@ -63,11 +70,8 @@ class Register(object):
             self.node_name = node_name
         self.logger.debug("Node name: {name}".format(name=self.node_name))
 
-        if check_fqdn is None:
-            self.check_fqdn = True
-        else:
-            self.logger.debug("Check FQDN: {u}".format(u=check_fqdn))
-            self.check_fqdn = strtobool(check_fqdn)
+        self.check_fqdn = check_fqdn
+        self.logger.debug("Check FQDN: {u}".format(u=check_fqdn))
 
         self.engine_fqdn = engine_fqdn
         self.logger.debug("Engine FQDN: {efqdn}".format(
@@ -85,19 +89,9 @@ class Register(object):
         self.logger.debug("Engine https port: {hp}".format(
                           hp=self.engine_port))
 
-        self.ca_file = ca_file
-        if self.ca_file:
-            self.logger.debug("CA File: {cf}".format(cf=self.ca_file))
-
-        self.force_uuid = force_uuid
-        if self.force_uuid:
-            self.logger.debug("Force UUID: {fu}".format(fu=self.force_uuid))
-
-        if persist_uuid is None:
-            self.persist_uuid = True
-        else:
-            self.logger.debug("Persist UUID: {pu}".format(pu=persist_uuid))
-            self.persist_uuid = strtobool(persist_uuid)
+        self.ca_engine = ca_file
+        if self.ca_engine:
+            self.logger.debug("CA File: {cf}".format(cf=self.ca_engine))
 
         if ssh_user is None:
             self.ssh_user = getpass.getuser()
@@ -113,13 +107,13 @@ class Register(object):
             self.node_image = True
         self.logger.debug("Node image: {ni}".format(ni=self.node_image))
 
-        self.states_to_run = []
-
         if ssh_port is None:
             self.ssh_port = '22'
         else:
             self.ssh_port = ssh_port
         self.logger.debug("SSH Port: {sport}".format(sport=self.ssh_port))
+
+        self.reg_protocol = None
 
         if vdsm_port is None:
             self.vdsm_port = '54321'
@@ -133,108 +127,122 @@ class Register(object):
             self.node_fqdn = node_fqdn
         self.logger.debug("Node FQDN: {nfqdn}".format(nfqdn=self.node_fqdn))
 
+        self.url_CA = None
+        self.url_reg = None
+        self.url_ssh_key = None
+        self.temp_ca = None
+
+        self.pki = PKI()
+
         self.logger.debug("=======================================")
 
-        """ Pre-defined states of object
-            get_ca   - Download the CA pem
-            get_ssh  - Get trust ssh
-            register - Execute the registration
-            get_protocol - Check which registration protocol engine offers
-            get_host_uuid - Get host uuid
+    def pki_trust(self):
         """
-
-        self.op = operations.Operations(engine_fqdn=self.engine_fqdn,
-                                        engine_url=self.engine_url,
-                                        engine_port=self.engine_port,
-                                        check_fqdn=self.check_fqdn,
-                                        node_name=self.node_name,
-                                        node_fqdn=self.node_fqdn,
-                                        vdsm_port=self.vdsm_port,
-                                        ssh_user=self.ssh_user,
-                                        ssh_port=self.ssh_port,
-                                        fprint=self.fprint)
-        self.cmd = {
-            'get_ca': self.__download_ca,
-            'get_ssh': self.__download_ssh,
-            'register': self.__execute_registration,
-            'get_protocol': self.__get_protocol,
-            'get_host_uuid': self.__get_host_uuid
-        }
-
-    def set_state(self, state):
+        Executes the PKI trust
         """
-        Collect the states to run
-        """
-        self.states_to_run.append(state)
+        self.ca_engine, self.temp_ca_file = self.pki.do_pki_trust(
+            url_CA=self.url_CA,
+            ca_engine=self.ca_engine,
+            user_fprint=self.fprint,
+            reg_protocol=self.reg_protocol,
+            check_fqdn=self.check_fqdn
+        )
 
-    def get_ca_fingerprint(self):
+    def get_pem_fingerprint(self):
         """
         Returns the fingerprint of CA
         """
-        return self.op.get_ca_fingerprint()
+        return self.pki.do_get_pem_fingerprint()
 
-    def get_reg_protocol(self):
+    def get_pem_data(self):
         """
-        Returns the current protocol
+        Returns the fingerprint of CA
         """
-        return self.op.get_ca_fingerprint()
+        return self.pki.do_get_pem_data()
 
-    def __get_host_uuid(self):
+    def detect_reg_protocol(self):
         """
-        Returns the host uuid
-        """
-        return self.op.host_uuid(self.force_uuid, self.persist_uuid)
-
-    def __get_protocol(self):
-        """
-        Returns the current registration protocol in the Engine
-        """
-        return self.op.get_protocol()
-
-    def __download_ca(self):
-        """
-        Get the PEM
-        """
-        return self.op.download_ca(self.ca_file)
-
-    def __execute_registration(self):
-        """
-        Registration step
-        """
-        return self.op.execute_registration()
-
-    def __download_ssh(self):
-        """
-        Get the SSH authorize_key
-        """
-        return self.op.download_ssh(self.ssh_user)
-
-    def run(self):
-        """
-        Run states provided
-
-        states - List of states to run
+        Determine if Engine is running in registration
+        protocol version legacy or service
+        REQUIRED_FOR: Engine 3.3
         """
 
-        if not self.states_to_run:
-            msg = "It's required to add a state before execute run!"
-            self.logger.exception(msg)
-            raise RuntimeError("Exception {e}".format(e=msg))
+        self.logger.debug("Identifying the registration protocol...")
 
-        for state in self.states_to_run:
-            try:
-                if state not in self.cmd:
-                    log = "The state [{s}] is invalid! " \
-                          "Use the following states: ".format(s=state)
+        ucmd = "/ovirt-engine/services/host-register?version=1&command="
+        __GET_VERSION = "https://{e}{u}{c}".format(e=self.engine_fqdn,
+                                                   u=ucmd,
+                                                   c="get-version")
 
-                    for key, val in list(self.cmd.items()):
-                        log += "{k} ".format(k=key)
-                    raise KeyError
-            except KeyError as e:
-                self.logger.error(log, exc_info=True)
-                raise e
-            self.logger.debug("Executing state: {newstate}".format(
-                              newstate=state))
-            self.cmd[state]()
+        res = requests.get(__GET_VERSION, verify=False)
+        if res.status_code != 200:
+            self.reg_protocol = "legacy"
+            self.url_CA = self.engine_url
 
-        self.states_to_run = []
+            self.url_ssh_key = "{e}{k}".format(e=self.engine_url,
+                                               k="/engine.ssh.key.txt")
+
+            ureg = "/OvirtEngineWeb/register?vds_ip={fqdn}" \
+                "&vds_name={name}&port={mp}".format(fqdn=self.node_fqdn,
+                                                    name=self.node_name,
+                                                    mp=self.vdsm_port)
+
+            self.url_reg = "{e}{u}".format(e=self.engine_url, u=ureg)
+        else:
+            self.reg_protocol = "service"
+            self.url_CA = "{e}{uc}{c}".format(e=self.engine_url,
+                                              uc=ucmd,
+                                              c="get-pki-trust")
+
+            self.url_ssh_key = "{e}{uc}{c}".format(e=self.engine_url,
+                                                   uc=ucmd, c="get-ssh-trust")
+
+            ureg = "{uc}register&name={name}&address={fqdn}&sshUser={sshu}&" \
+                   "sshPort={sshp}&port={mp}".format(uc=ucmd,
+                                                     name=self.node_name,
+                                                     fqdn=self.node_fqdn,
+                                                     sshu=self.ssh_user,
+                                                     sshp=self.ssh_port,
+                                                     mp=self.vdsm_port)
+
+            self.url_reg = "{e}{u}".format(e=self.engine_url, u=ureg)
+
+        self.logger.debug("Registration procotol selected: {p}".format(
+                          p=self.reg_protocol))
+
+        self.logger.debug("Download CA via: {u}".format(u=self.url_CA))
+        self.logger.debug("Download SSH via: {u}".format(u=self.url_ssh_key))
+
+    def ssh_trust(self):
+        return SSH().do_ssh_trust(ssh_user=self.ssh_user,
+                                  url_ssh_key=self.url_ssh_key,
+                                  ca_engine=self.ca_engine,
+                                  check_fqdn=self.check_fqdn)
+
+    def collect_host_uuid(self, force_uuid, persist_uuid):
+        """
+        persist_uuid- Save the UUID in the disk /etc/vdsm/vdsm.id
+                      (True or False) Default: True
+
+        force_uuid  - Force the UUID of machine. It's useful for machines
+                      that provides duplicate UUID.
+        """
+        _uuid = UUID().do_collect_host_uuid(force_uuid=force_uuid,
+                                            persist_uuid=persist_uuid,
+                                            reg_protocol=self.reg_protocol)
+
+        self.url_reg += "&uniqueId={u}".format(u=_uuid)
+        self.logger.debug("Registration via: {u}".format(u=self.url_reg))
+        return _uuid
+
+    def execute_registration(self):
+        """
+        Trigger the registration command against Engine
+        """
+        self.logger.debug("Registration URL: %s" % self.url_reg)
+        HTTP().execute_request(url=self.url_reg, check_fqdn=self.check_fqdn,
+                               ca_engine=self.ca_engine, cert_validation=True)
+
+        # Check if ca_engine is None (no provided) and temp file exists
+        if self.temp_ca_file is not None and os.path.exists(self.ca_engine):
+            os.unlink(self.ca_engine)
