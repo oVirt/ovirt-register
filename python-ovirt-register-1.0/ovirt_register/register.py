@@ -215,7 +215,7 @@ class Register(object):
         self.logger.debug("Download CA via: {u}".format(u=self.url_CA))
         self.logger.debug("Download SSH via: {u}".format(u=self.url_ssh_key))
 
-    def get_reg_protocol(self):
+    def get_registration_protocol(self):
         """
         Return the current registration protocol
 

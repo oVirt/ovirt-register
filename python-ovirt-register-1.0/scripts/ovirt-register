@@ -174,7 +174,7 @@ def main():
 
     print("Registration protocol detected:")
     print("============================")
-    print(("\t{0}\n".format(reg.get_reg_protocol())))
+    print(("\t{0}\n".format(reg.get_registration_protocol())))
 
     print("Host UUID:")
     print("============================")
