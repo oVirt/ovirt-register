@@ -232,7 +232,7 @@ class Register(object):
                                   ca_engine=self.ca_engine,
                                   check_fqdn=self.check_fqdn)
 
-    def collect_host_uuid(self, force_uuid, nopersist_uuid):
+    def collect_host_uuid(self, force_uuid=None, nopersist_uuid=None):
         """
         nopersist_uuid - If True, do not save the UUID in the disk
                          /etc/vdsm/vdsm.id

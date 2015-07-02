@@ -23,8 +23,8 @@ class UUID(object):
     def __init__(self):
         self.logger = logging.getLogger(__name__)
 
-    def do_collect_host_uuid(self, force_uuid=None,
-                             nopersist_uuid=None, reg_protocol=None):
+    def do_collect_host_uuid(self, force_uuid,
+                             nopersist_uuid, reg_protocol):
         """
         Returns the host uuid
 
@@ -43,6 +43,10 @@ class UUID(object):
         __VDSM_ID = "{d}/vdsm.id".format(d=__VDSM_DIR)
 
         self.logger.debug("Processing UUID of host...")
+
+        if reg_protocol is None:
+            raise RuntimeError("Aborting.. cannot detect "
+                               "registration protocol!")
 
         if os.path.exists(__VDSM_ID) and os.stat(__VDSM_ID).st_size == 0:
             system.NodeImage().unpersist(__VDSM_ID)
