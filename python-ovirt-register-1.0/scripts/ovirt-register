@@ -172,6 +172,10 @@ def main():
                            "into {e}:\n {exc}".format(e=args.engine_fqdn,
                                                       exc=e))
 
+    print("Registration protocol detected:")
+    print("============================")
+    print(("\t{0}\n".format(reg.get_reg_protocol())))
+
     print("Host UUID:")
     print("============================")
     print(("\t{0}\n".format(uuid)))

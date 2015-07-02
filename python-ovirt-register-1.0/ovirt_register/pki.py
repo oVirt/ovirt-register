@@ -31,7 +31,8 @@ class PKI(object):
         self.pem_data = None
 
     def do_pki_trust(self, url_CA, ca_engine, check_fqdn,
-                     user_fprint, reg_protocol):
+                     user_fprint, reg_protocol, engine_fqdn,
+                     engine_port):
         """
         Download CA from Engine and save in the filesystem if ca_file is
         specified
@@ -59,9 +60,13 @@ class PKI(object):
 
             if reg_protocol == "legacy":
                 # REQUIRED_FOR: Engine 3.3
-                res = ssl.get_server_certificate(
-                    (self.engine_fqdn, int(self.engine_port))
-
+                res = (
+                    ssl.get_server_certificate(
+                        (
+                            engine_fqdn,
+                            int(engine_port)
+                        )
+                    )
                 )
             else:
                 res = HTTP().execute_request(url=url_CA,

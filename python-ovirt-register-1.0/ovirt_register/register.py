@@ -145,7 +145,9 @@ class Register(object):
             ca_engine=self.ca_engine,
             user_fprint=self.fprint,
             reg_protocol=self.reg_protocol,
-            check_fqdn=self.check_fqdn
+            check_fqdn=self.check_fqdn,
+            engine_fqdn=self.engine_fqdn,
+            engine_port=self.engine_port
         )
 
     def get_pem_fingerprint(self):
@@ -162,8 +164,8 @@ class Register(object):
 
     def detect_reg_protocol(self):
         """
-        Determine if Engine is running in registration
-        protocol version legacy or service
+        Determine which registration protocol Engine
+        is running: legacy or service
         REQUIRED_FOR: Engine 3.3
         """
 
@@ -213,7 +215,20 @@ class Register(object):
         self.logger.debug("Download CA via: {u}".format(u=self.url_CA))
         self.logger.debug("Download SSH via: {u}".format(u=self.url_ssh_key))
 
+    def get_reg_protocol(self):
+        """
+        Return the current registration protocol
+
+        None    - No protocol detected
+        service - New protocol
+        legacy  - The legacy protocol
+        """
+        return self.reg_protocol
+
     def ssh_trust(self):
+        """
+        Download pub key from Engine and save in ~/.ssh/authorized_keys
+        """
         return SSH().do_ssh_trust(ssh_user=self.ssh_user,
                                   url_ssh_key=self.url_ssh_key,
                                   ca_engine=self.ca_engine,
@@ -221,18 +236,23 @@ class Register(object):
 
     def collect_host_uuid(self, force_uuid, persist_uuid):
         """
-        persist_uuid- Save the UUID in the disk /etc/vdsm/vdsm.id
-                      (True or False) Default: True
+        persist_uuid - If True, do not save the UUID in the disk
+                       /etc/vdsm/vdsm.id
 
-        force_uuid  - Force the UUID of machine. It's useful for machines
-                      that provides duplicate UUID.
+        force_uuid   - Force the UUID of machine. It's useful for machines
+                       that provides duplicate UUID.
         """
         _uuid = UUID().do_collect_host_uuid(force_uuid=force_uuid,
                                             persist_uuid=persist_uuid,
                                             reg_protocol=self.reg_protocol)
 
-        self.url_reg += "&uniqueId={u}".format(u=_uuid)
+        if self.reg_protocol == "legacy":
+            self.url_reg += "&vds_unique_id={u}".format(u=_uuid)
+        else:
+            self.url_reg += "&uniqueId={u}".format(u=_uuid)
+
         self.logger.debug("Registration via: {u}".format(u=self.url_reg))
+
         return _uuid
 
     def execute_registration(self):
