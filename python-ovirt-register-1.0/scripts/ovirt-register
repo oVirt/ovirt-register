@@ -48,10 +48,16 @@ def set_logger(logfile_path=None):
         jhandler.setFormatter(formatter)
         log.addHandler(jhandler)
     except UnboundLocalError:
-        syslog = SysLogHandler(address="/dev/log")
-        formatter = logging.Formatter("%(name)s %(asctime)s %(message)s")
-        syslog.setFormatter(formatter)
-        log.addHandler(syslog)
+        try:
+            syslog = SysLogHandler(address="/dev/log")
+            formatter = logging.Formatter("%(name)s %(asctime)s %(message)s")
+            syslog.setFormatter(formatter)
+            log.addHandler(syslog)
+        except Exception as e:
+            print("WARNING:")
+            print("========")
+            print("Cannot set log handler: /dev/log, to save logging "
+                  "use --log option!\n{0}\n".format(e))
 
 
 def main():
