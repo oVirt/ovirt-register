@@ -26,7 +26,7 @@ class SSH(object):
     def do_ssh_trust(self, ssh_user, ca_engine,
                      url_ssh_key, check_fqdn):
         """
-        Download pub key and save it in the node
+        Download pub key and save it in ~/.ssh/authorized_keys
         """
         self.logger.debug("Collecting ssh pub key data...")
         _uid = pwd.getpwnam(ssh_user).pw_uid

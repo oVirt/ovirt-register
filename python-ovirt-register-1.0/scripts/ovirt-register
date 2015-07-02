@@ -138,8 +138,8 @@ def main():
 
     parser.add_argument(
         '--nopersist-uuid',
-        default=True,
-        action='store_false',
+        default=False,
+        action='store_true',
         help="Do not save the UUID in the disk (/etc/vdsm/vdsm.id)."
              "The default behaviour is save into the disk (Use: True or False)"
     )
@@ -161,7 +161,7 @@ def main():
         reg.detect_reg_protocol()
 
         uuid = reg.collect_host_uuid(force_uuid=args.force_uuid,
-                                     persist_uuid=args.nopersist_uuid)
+                                     nopersist_uuid=args.nopersist_uuid)
 
         reg.pki_trust()
         ssh_trust = reg.ssh_trust()

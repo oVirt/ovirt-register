@@ -19,9 +19,11 @@ class HTTP(object):
     def execute_request(self, url, check_fqdn,
                         ca_engine, cert_validation=True):
         """
-        Execute http requests
+        Execute http request
         url -- URL to be requested
-        cert_validation -- SSL cert will be verified
+        ca_engine -- The PEM file
+        check_fqdn -- User input for checking FQDN
+        cert_validation -- caller can specify if should check FQDN
 
         Returns: Content of http request
         """

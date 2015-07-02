@@ -24,7 +24,7 @@ class UUID(object):
         self.logger = logging.getLogger(__name__)
 
     def do_collect_host_uuid(self, force_uuid=None,
-                             persist_uuid=None, reg_protocol=None):
+                             nopersist_uuid=None, reg_protocol=None):
         """
         Returns the host uuid
 
@@ -35,7 +35,7 @@ class UUID(object):
         force_uuid   -- UUID that will be used for registration.
                         Useful for machine that duplicates uuid.
 
-        persist_uuid -- Save the UUID into the disk (/etc/vdsm/vdsm.id)
+        nopersist_uuid -- Save the UUID into the disk (/etc/vdsm/vdsm.id)
                         (True or False)
         """
         _uuid = None
@@ -48,22 +48,23 @@ class UUID(object):
             system.NodeImage().unpersist(__VDSM_ID)
             os.unlink(__VDSM_ID)
 
-        if not os.path.exists(__VDSM_DIR) and persist_uuid:
-            os.makedirs(__VDSM_DIR, 0o755)
+        if not nopersist_uuid:
+            if not os.path.exists(__VDSM_DIR):
+                os.makedirs(__VDSM_DIR, 0o755)
 
         if reg_protocol == "legacy" and force_uuid is None:
             # REQUIRED_FOR: Engine 3.3
             # The legacy version uses the format: UUID_MACADDRESS
-            _uuid = self.getHostUUID(legacy=True)
+            _uuid = self._getHostUUID(legacy=True)
 
         elif reg_protocol == "service" and force_uuid is None:
             # Non legacy version uses the format: UUID
-            _uuid = self.getHostUUID(legacy=False)
+            _uuid = self._getHostUUID(legacy=False)
 
         if force_uuid is not None:
             _uuid = force_uuid
 
-        if _uuid and persist_uuid:
+        if not nopersist_uuid and _uuid:
             with open(__VDSM_ID, 'w+') as f:
                 f.write(_uuid)
 
@@ -103,7 +104,7 @@ class UUID(object):
 
         return set(macs) - set(["", "00:00:00:00:00:00"])
 
-    def getHostUUID(self, legacy=True):
+    def _getHostUUID(self, legacy=True):
         """
         This functions has been originally written in VDSM project.
         Will be provided here to avoid the dependency project.

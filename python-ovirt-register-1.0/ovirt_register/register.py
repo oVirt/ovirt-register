@@ -36,8 +36,6 @@ class Register(object):
                  ca_file=None, engine_https_port=None):
 
         """
-        The Register goal is to register any host againt Engine
-
         Attributes:
         node_name   - Name to Node
         engine_fqdn - Engine FQDN or address accessible from Node
@@ -234,16 +232,16 @@ class Register(object):
                                   ca_engine=self.ca_engine,
                                   check_fqdn=self.check_fqdn)
 
-    def collect_host_uuid(self, force_uuid, persist_uuid):
+    def collect_host_uuid(self, force_uuid, nopersist_uuid):
         """
-        persist_uuid - If True, do not save the UUID in the disk
-                       /etc/vdsm/vdsm.id
+        nopersist_uuid - If True, do not save the UUID in the disk
+                         /etc/vdsm/vdsm.id
 
         force_uuid   - Force the UUID of machine. It's useful for machines
                        that provides duplicate UUID.
         """
         _uuid = UUID().do_collect_host_uuid(force_uuid=force_uuid,
-                                            persist_uuid=persist_uuid,
+                                            nopersist_uuid=nopersist_uuid,
                                             reg_protocol=self.reg_protocol)
 
         if self.reg_protocol == "legacy":

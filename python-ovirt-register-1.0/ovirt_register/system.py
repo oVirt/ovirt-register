@@ -72,6 +72,9 @@ class NodeImage(object):
         self.logger = logging.getLogger(__name__)
 
     def persist(self, fname=None):
+        """
+        Execute the persist command in ovirt-node
+        """
         try:
             if self.check() and fname is not None:
                 from ovirt.node.utils.fs import Config
@@ -93,6 +96,9 @@ class NodeImage(object):
                 bool(glob.glob('/etc/ovirt-node-*-release')))
 
     def unpersist(self, fname):
+        """
+        Execute the unpersist command in ovirt-node
+        """
         try:
             if self.check() and fname is not None:
                 from ovirt.node.utils.fs import Config
