@@ -54,9 +54,10 @@ class SSH(object):
 
         with open(_auth_keys, "a") as f_w:
             f_w.write(http_res_str)
-            os.chmod(_auth_keys, 0o600)
-            os.chown(_auth_keys, _uid, _uid)
-            system.silent_restorecon(_auth_keys)
-            system.NodeImage().persist(_auth_keys)
+
+        os.chmod(_auth_keys, 0o600)
+        os.chown(_auth_keys, _uid, _uid)
+        system.silent_restorecon(_auth_keys)
+        system.NodeImage().persist(_auth_keys)
 
         return _auth_keys
