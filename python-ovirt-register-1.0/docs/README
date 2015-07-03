@@ -156,6 +156,12 @@ Troubleshooting:
         A: Some distros still makes sudo require a TTY to execute commands. 
            More info: see sudoers man page. (requiretty option)
 
+        M: Unexpected error during execution: reset: standard error:
+           Inappropriate ioctl for device
+        A: Verify if the user that oVirt Engine is trying to connect into the
+           node has proper shell assigned. Generally it's possible to see
+           the shell assigned to user in the /etc/passwd file.
+
     Fedora 22
 
         Message: ssh_dispatch_run_fatal: no matching key exchange method found
