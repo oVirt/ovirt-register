@@ -16,7 +16,7 @@
 
 Name:           python-ovirt-register
 Version:        1.0
-Release:        3%{?dist}
+Release:        4%{?dist}
 Summary:        A python module and tool for registering nodes to oVirt Engine
 License:        GPLv2+
 Group:          System Environment/Libraries
@@ -127,6 +127,9 @@ install -p -m644 man/ovirt-register.1 %buildroot%{_mandir}/man1/ovirt-register.1
 %endif
 
 %changelog
+* Fri Jul 03 2015 Douglas Schilling Landgraf <dougsland@redhat.com> 1.0-4
+- chmod/chown should be outside of with
+
 * Thu Jul 02 2015 Douglas Schilling Landgraf <dougsland@redhat.com> 1.0-3
 - Improve uuid API handling
 - improve spec
