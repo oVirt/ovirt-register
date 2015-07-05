@@ -171,6 +171,16 @@ Troubleshooting:
            node has proper shell assigned. Generally it's possible to see
            the shell assigned to user in the /etc/passwd file.
 
+
+    Trying to run the tool:
+
+        M: ImportError: No module named ovirt_register.register
+        A: Might be that you have installed python3-ovirt-register package
+           and is trying to run the tool using python2 interpreter?
+           Depeding of the distro /usr/bin/python is a symbol link to python2
+
+           If it's the case you can run: # python3 /path/ovirt-register
+
     Fedora 22
 
         Message: ssh_dispatch_run_fatal: no matching key exchange method found
