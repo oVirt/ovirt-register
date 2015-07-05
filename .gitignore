@@ -11,6 +11,8 @@ config.sub
 missing
 install-sh
 python-ovirt-register*.tar.gz
+python-ovirt-register.spec
+src/ovirt_register/uuid.py
 autom4te.cache
 *.swp
 py-compile
