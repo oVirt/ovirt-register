@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 #
 # Copyright (C) 2015 Red Hat, Inc.
-# Douglas Schilling Landgraf <dougsland@redhat.com>
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -123,8 +122,8 @@ class UUID(object):
             else:
                 arch = platform.machine()
                 if arch in ('x86_64', 'i686'):
-                    out, err, ret = system.execute_cmd(["dmidecode", "-s",
-                                                       "system-uuid"])
+                    out, err, ret = system.execute_cmd(["@DMIDECODE_PATH@",
+                                                       "-s", "system-uuid"])
 
                     out = "{0}".format(out.decode('utf-8'))
                     out = '\n'.join(line for line in out.splitlines()
