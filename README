@@ -13,9 +13,6 @@ Installing in Fedora:
     If you running python3 use:
     $ sudo dnf install python3-ovirt-register
 
-    If you running python2 use:
-    $ sudo dnf install python-ovirt-register
-
 CentOS EPEL6 or EPEL7:
 ========================
 
@@ -32,10 +29,22 @@ Building and Installing manually the rpm:
 =================================================
 
     $ git clone this-repo
-    $ cd python-ovirt-register
-    $ tar cvz -f python-ovirt-register-NVR.tar.gz .
+    $ cd ovirt-register
+
+    If you are running python3
+    $ ./autogen.sh
+
+    If you are running python2
+    $ ./autogen.sh --without-python3
+
+    $ make dist
     $ cp python-ovirt-register-NVR.tar.gz ~/rpmbuild/SOURCES
     $ rpmbuild -ba python-ovirt-register.spec
+
+    Fedora:
+    $ dnf install ~/rpmbuild/RPMS/noarch/python3-ovirt-register-NVR.noarch.rpm
+
+    Centos:
     $ dnf install ~/rpmbuild/RPMS/noarch/python-ovirt-register-NVR.noarch.rpm
 
 Syntax of tool:
