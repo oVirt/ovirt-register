@@ -144,7 +144,7 @@ Logging:
     --log my_log_file
 
     Example of reading journal (last 50 lines):
-    # journalctl -n50 -x --no-page
+    # journalctl -n50 -x --no-pager
 
     Example of reading messages:
     # tail -f /var/log/messages
