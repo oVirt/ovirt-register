@@ -56,8 +56,8 @@ def set_logger(logfile_path=None):
         except Exception as e:
             print("WARNING:")
             print("========")
-            print("Cannot set log handler: /dev/log, to save logging "
-                  "use --log option!\n{0}\n".format(e))
+            print(("Cannot set log handler: /dev/log, to save logging "
+                  "use --log option!\n{0}\n".format(e)))
 
 
 def main():
