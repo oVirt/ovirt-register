@@ -42,10 +42,10 @@ Building and Installing manually the rpm:
     $ rpmbuild -ba python-ovirt-register.spec
 
     Fedora:
-    $ dnf install ~/rpmbuild/RPMS/noarch/python3-ovirt-register-NVR.noarch.rpm
+    # dnf install ~/rpmbuild/RPMS/noarch/python3-ovirt-register-NVR.noarch.rpm
 
     Centos:
-    $ dnf install ~/rpmbuild/RPMS/noarch/python-ovirt-register-NVR.noarch.rpm
+    # yum install ~/rpmbuild/RPMS/noarch/python-ovirt-register-NVR.noarch.rpm
 
 Syntax of tool:
 ========================
