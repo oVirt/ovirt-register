@@ -1,0 +1,10 @@
+automake
+autoconf
+make
+git
+python3
+python3-devel
+python3-setuptools
+python3-pyflakes
+python3-pep8
+python-tools
