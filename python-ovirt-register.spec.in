@@ -33,6 +33,7 @@ BuildArch:      noarch
 
 BuildRequires: python2-devel
 BuildRequires: python-setuptools
+BuildRequires: python-tools
 BuildRequires: python-pep8
 BuildRequires: pyflakes
 
@@ -49,6 +50,7 @@ BuildRequires: python3-devel
 BuildRequires: python3-setuptools
 BuildRequires: python3-pyflakes
 BuildRequires: python3-pep8
+BuildRequires: python-tools
 %endif
 
 Requires: pyOpenSSL

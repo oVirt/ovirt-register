@@ -41,7 +41,7 @@ DISTCLEANFILES = \
 
 DISTCLEANDIRS = autom4te.cache
 
-rpm: pep8 pyflakes dist
+rpm: 2to3 pep8 pyflakes dist
 	rpmbuild $(RPM_FLAGS) -ta $(distdir).tar.gz
 
 srpm: dist
@@ -64,4 +64,11 @@ pyflakes:
 	do \
 		echo pyflakes on "$$M"; \
 		PYTHONPATH=. pyflakes $$M || exit 1; \
+	done
+
+2to3:
+	@for M in $(PYTHONSOURCES); \
+	do \
+		echo 2to3 on "$$M"; \
+		PYTHONPATH=. 2to3 $$M || exit 1; \
 	done
