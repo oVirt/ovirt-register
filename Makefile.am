@@ -41,7 +41,7 @@ DISTCLEANFILES = \
 
 DISTCLEANDIRS = autom4te.cache
 
-rpm: 2to3 pep8 pyflakes dist
+rpm: check-local dist
 	rpmbuild $(RPM_FLAGS) -ta $(distdir).tar.gz
 
 srpm: dist
@@ -49,7 +49,7 @@ srpm: dist
 
 .PHONY: rpm srpm
 
-check-local: doctests pep8 pyflakes pylint
+check-local: 2to3 pep8 pyflakes
 	@echo -e "---\n Passed.\n---"
 
 pep8:
