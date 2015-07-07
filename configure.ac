@@ -32,7 +32,7 @@ define([VERSION_MAJOR], [1])
 define([VERSION_MINOR], [0])
 define([VERSION_FIX], [0])
 define([VERSION_NUMBER], VERSION_MAJOR[.]VERSION_MINOR[.]VERSION_FIX)
-define([VERSION_SUFFIX], [])
+define([VERSION_SUFFIX], [_master])
 
 AC_INIT([python-ovirt-register], VERSION_NUMBER[]VERSION_SUFFIX, [devel@ovirt.org])
 PACKAGE_NAME="python-ovirt-register"
