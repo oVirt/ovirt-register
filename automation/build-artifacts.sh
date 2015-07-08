@@ -16,7 +16,14 @@ shopt -s nullglob
 rm -rf ../exported-artifacts/*
 rm -rf tmp.repos
 # generate automake/autoconf files
-./autogen.sh
+
+# If it's Fedora use python3
+if [ -f "/etc/fedora-release" ]
+then
+    ./autogen.sh
+else
+    ./autogen.sh --without-python3
+fi
 
 # create rpm
 make rpm
