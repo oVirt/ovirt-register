@@ -1,0 +1,11 @@
+automake
+autoconf
+make
+git
+rpmbuild
+python
+python-devel
+python-setuptools
+python-tools
+python-pep8
+pyflakes
