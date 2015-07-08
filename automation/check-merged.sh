@@ -11,4 +11,12 @@
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
 
-./autogen.sh && make -j8 check-local
+# If it's Fedora use python3
+if [ -f "/etc/fedora-release" ]
+then
+    ./autogen.sh
+else
+    ./autogen.sh --without-python3
+fi
+
+make -j8 check-local
