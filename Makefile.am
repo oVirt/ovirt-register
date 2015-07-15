@@ -44,7 +44,7 @@ DISTCLEANDIRS = autom4te.cache
 TMPREPOS = tmp.repos
 RPM_FLAGS := --define="_topdir `pwd`/$(TMPREPOS)"
 
-rpm: check-local srpm
+rpm: srpm
 	rpmbuild $(RPM_FLAGS) --rebuild "$(TMPREPOS)"/SRPMS/*.src.rpm
 	cp $(distdir).tar.gz $(TMPREPOS)/SOURCES/
 	@echo

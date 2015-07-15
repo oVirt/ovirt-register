@@ -13,6 +13,13 @@
 %{!?__python2: %global __python2 /usr/bin/python2}
 %{!?python2_sitelib2: %global python2_sitelib %(%{__python2} -c "from distutils.sysconfig import get_python_lib; print (get_python_lib())")}
 
+# Skips check since rhel default repos lack pep8 and pyflakes
+%if ! 0%{?rhel}
+%{!?with_check:%global with_check 1}
+%else
+%{!?with_check:%global with_check 0}
+%endif
+
 # Default to skipping autoreconf.  Distros can change just this one line
 # (or provide a command-line override) if they backport any patches that
 # touch configure.ac or Makefile.am.
@@ -34,8 +41,11 @@ BuildArch:      noarch
 BuildRequires: python2-devel
 BuildRequires: python-setuptools
 BuildRequires: python-tools
+
+%if 0%{?with_check}
 BuildRequires: python-pep8
 BuildRequires: pyflakes
+%endif
 
 # Autotools BuildRequires
 %if 0%{?enable_autotools}
@@ -45,7 +55,7 @@ BuildRequires: gettext-devel
 BuildRequires: libtool
 %endif
 
-%if 0%{?with_python3}
+%if 0%{?with_python3} && 0%{?with_check}
 BuildRequires: python3-devel
 BuildRequires: python3-setuptools
 BuildRequires: python3-pyflakes
@@ -105,6 +115,11 @@ make %{?_smp_mflags}
 
 %install
 make %{?_smp_mflags} install DESTDIR="%{buildroot}"
+
+%check
+%if 0%{?with_check}
+make check-local
+%endif
 
 %if 0%{?with_python2}
 %files
