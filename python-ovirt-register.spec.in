@@ -37,6 +37,7 @@ URL:            http://www.ovirt.org
 Source0:        http://resources.ovirt.org/pub/src/%{name}/%{name}-%{package_version}.tar.gz
 
 BuildArch:      noarch
+ExcludeArch:    %{arm}
 
 BuildRequires: python2-devel
 BuildRequires: python-setuptools
